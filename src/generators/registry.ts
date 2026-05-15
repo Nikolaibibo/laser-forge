@@ -8,6 +8,7 @@ import { superformula } from "./superformula";
 import { attractor } from "./attractor";
 import { rose } from "./rose";
 import { spirograph } from "./spirograph";
+import { truchet } from "./truchet";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATORS: GeneratorDef<any>[] = [
@@ -16,6 +17,7 @@ export const GENERATORS: GeneratorDef<any>[] = [
   rose,
   spirograph,
   superformula,
+  truchet,
   attractor,
   voronoi,
   lSystem,
