@@ -1,0 +1,61 @@
+import type { Artwork } from "../generators/types";
+import { dedupePaths } from "../util/dedupePaths";
+
+const round = (n: number, digits = 3): string => {
+  const m = Math.pow(10, digits);
+  return String(Math.round(n * m) / m);
+};
+
+export type SvgExportOptions = {
+  /** Remove duplicate and overlapping collinear path segments before serializing. */
+  dedupe?: boolean;
+};
+
+/**
+ * Serialize an Artwork to clean, plotter/laser-friendly SVG.
+ * - viewBox in millimetres
+ * - <path> elements only (no <circle>, <rect>, no text)
+ * - stroke only, no fill, black
+ */
+export const svgExport = (art: Artwork, opts: SvgExportOptions = {}): string => {
+  const { widthMm, heightMm } = art;
+  const lines = opts.dedupe ? dedupePaths(art.polylines) : art.polylines;
+  const paths = lines
+    .filter((l) => l.points.length >= 2)
+    .map((l) => {
+      const d =
+        "M " +
+        l.points
+          .map(([x, y], i) => (i === 0 ? `${round(x)},${round(y)}` : `L ${round(x)},${round(y)}`))
+          .join(" ") +
+        (l.closed ? " Z" : "");
+      return `<path d="${d}"/>`;
+    })
+    .join("\n  ");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${widthMm}mm" height="${heightMm}mm"
+     viewBox="0 0 ${widthMm} ${heightMm}"
+     fill="none" stroke="black" stroke-width="0.3"
+     stroke-linecap="round" stroke-linejoin="round">
+  ${paths}
+</svg>
+`;
+};
+
+export const downloadSvg = (
+  art: Artwork,
+  filename = "laser-forge.svg",
+  opts: SvgExportOptions = {},
+) => {
+  const blob = new Blob([svgExport(art, opts)], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
