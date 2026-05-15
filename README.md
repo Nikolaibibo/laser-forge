@@ -3,6 +3,8 @@
 Persönliche Werkbank für generative Vektor-Motive. Output geht direkt in
 Laser oder Plotter.
 
+**Live:** https://laser-forge-nb.web.app
+
 ## Das Modell
 
 ```
@@ -20,16 +22,18 @@ Ein Basis-Generator erzeugt ein Artwork (Polylines in mm). Optional läuft das
 Artwork durch eine Pipeline aus Distortion-Layern. Alles ist
 **seed-deterministisch** und **shareable** via URL-Hash.
 
-## Basis-Generatoren (8)
+## Basis-Generatoren (10)
 
 | Name | Charakter |
 |------|-----------|
 | **Flow Field** | Tyler-Hobbs-Look, viele strömende Linien via Simplex-Noise |
 | **Harmonograph** | 4 gekoppelte Pendel, ein eleganter Strich |
 | **Rose / Maurer Rose** | Rhodonea-Blumen + Stern-Interferenz-Variante |
+| **Spirograph** | Hypo- und Epitrochoid, klassische Sternmuster |
 | **Superformula** | Gielis Formel, radiale Symmetrie von Stern bis Blob |
+| **Truchet** | Tile-Grid mit Smith-Bögen oder Diagonalen, maze-artig |
 | **Strange Attractor** | Clifford / De Jong / Svensson, chaotisches Garngewebe |
-| **Voronoi / Delaunay / Truchet** | Tilings + Zellstrukturen (3-in-1) |
+| **Voronoi / Delaunay** | Zellstrukturen aus Poisson-Disk-Sampling |
 | **L-System** | Koch, Dragon, Plant, Sierpinski, Hilbert |
 | **Differential Growth** | Anders-Hoff-artige organische Ringe |
 
@@ -56,8 +60,9 @@ npm run build
 
 1. Basis-Generator wählen → Parameter schrauben
 2. Distortion-Layer hinzufügen (+ in PIPELINE-Panel)
-3. **⬇ SVG** → Download (mm, paths-only)
-4. Durch `vpype` optimieren → in LightBurn brennen — siehe [docs/laser-workflow.md](docs/laser-workflow.md)
+3. Optional: **Dedupe paths** anhaken — entfernt überlappende Pfade (wichtig bei Kaleidoscope-Mandalas, sonst brennt der Laser sie doppelt)
+4. **⬇ SVG** → Download (mm, paths-only)
+5. Durch `vpype` optimieren → in LightBurn brennen — siehe [docs/laser-workflow.md](docs/laser-workflow.md)
 
 ## Architektur
 
@@ -82,9 +87,19 @@ automatisch dran.
 
 ```bash
 npx tsx scripts/smoke.mjs          # Alle Generatoren + Distortions testen
+npx tsx scripts/test-dedupe.mjs    # Path-Dedupe-Unit-Tests
 npx tsx scripts/export-test.mjs    # Sample-SVGs nach /tmp/laser-forge-samples/
 npm run typecheck
 ```
+
+## Deploy
+
+```bash
+npm run build
+firebase deploy --only hosting --project laser-forge-nb
+```
+
+Hosting läuft unter `nikolaibibo@gmail.com` (nicht der GoMedicus-Account).
 
 ## Referenzen
 
