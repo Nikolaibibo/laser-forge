@@ -7,12 +7,14 @@ import { differentialGrowth } from "./differentialGrowth";
 import { superformula } from "./superformula";
 import { attractor } from "./attractor";
 import { rose } from "./rose";
+import { spirograph } from "./spirograph";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATORS: GeneratorDef<any>[] = [
   flowField,
   harmonograph,
   rose,
+  spirograph,
   superformula,
   attractor,
   voronoi,
