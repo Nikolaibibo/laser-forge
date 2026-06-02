@@ -104,6 +104,11 @@ export class PlotterPort {
       await new Promise<void>((r) => setTimeout(r, 5));
     }
 
+    // Re-check: a disconnect may have fired while we were waiting in the loop above
+    if (!this.connected) {
+      throw new Error("PlotterPort: not connected");
+    }
+
     return new Promise<string>((resolve) => {
       this.pendingResolve = resolve;
       const encoded = new TextEncoder().encode(`${line}\r\n`);
