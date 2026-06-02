@@ -1,5 +1,6 @@
 import type { Artwork } from "../generators/types";
 import { dedupePaths } from "../util/dedupePaths";
+import { mergePaths } from "../util/mergePaths";
 
 const round = (n: number, digits = 3): string => {
   const m = Math.pow(10, digits);
@@ -9,6 +10,8 @@ const round = (n: number, digits = 3): string => {
 export type SvgExportOptions = {
   /** Remove duplicate and overlapping collinear path segments before serializing. */
   dedupe?: boolean;
+  /** Join open polylines whose endpoints coincide into longer continuous paths. */
+  join?: boolean;
 };
 
 /**
@@ -19,7 +22,8 @@ export type SvgExportOptions = {
  */
 export const svgExport = (art: Artwork, opts: SvgExportOptions = {}): string => {
   const { widthMm, heightMm } = art;
-  const lines = opts.dedupe ? dedupePaths(art.polylines) : art.polylines;
+  let lines = opts.dedupe ? dedupePaths(art.polylines) : art.polylines;
+  if (opts.join) lines = mergePaths(lines);
   const paths = lines
     .filter((l) => l.points.length >= 2)
     .map((l) => {

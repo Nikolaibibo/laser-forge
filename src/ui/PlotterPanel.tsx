@@ -4,6 +4,7 @@ import { PlotterPort } from "../plotter/webserial";
 import { Grbl } from "../plotter/grbl";
 import { artworkToGcode, outlineGcode, bbox, DEFAULT_PEN } from "../plotter/gcode";
 import { streamJob } from "../plotter/streamJob";
+import { mergePaths } from "../util/mergePaths";
 
 export function PlotterPanel() {
   // Read the current artwork from the store (the panel lives outside the
@@ -17,6 +18,7 @@ export function PlotterPanel() {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [feed, setFeed] = useState(4500);
   const [step, setStep] = useState(10);
+  const [joinPaths, setJoinPaths] = useState(true);
 
   if (!PlotterPort.available()) {
     return <div style={box}>Plotter: needs Chrome/Edge (WebSerial).</div>;
@@ -41,7 +43,9 @@ export function PlotterPanel() {
 
   async function plot() {
     if (!artwork) return;
-    const lines = artworkToGcode(artwork, { ...DEFAULT_PEN, feed });
+    const polys = joinPaths ? mergePaths(artwork.polylines) : artwork.polylines;
+    const merged = { ...artwork, polylines: polys };
+    const lines = artworkToGcode(merged, { ...DEFAULT_PEN, feed });
     abortRef.current = new AbortController();
     try {
       await streamJob(portRef.current!, lines, {
@@ -58,10 +62,12 @@ export function PlotterPanel() {
 
   async function outline(draw: boolean) {
     if (!artwork) return;
+    const polys = joinPaths ? mergePaths(artwork.polylines) : artwork.polylines;
+    const merged = { ...artwork, polylines: polys };
     try {
       await streamJob(
         portRef.current!,
-        outlineGcode(bbox(artwork), { ...DEFAULT_PEN, feed }, draw),
+        outlineGcode(bbox(merged), { ...DEFAULT_PEN, feed }, draw),
         {},
       );
     } catch (e) {
@@ -154,6 +160,17 @@ export function PlotterPanel() {
                 onChange={(e) => setFeed(Number(e.target.value))}
                 style={{ width: 64 }}
               />
+            </label>
+            <label
+              title="Join open polylines whose endpoints touch into longer continuous paths, reducing pen lifts."
+              style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}
+            >
+              <input
+                type="checkbox"
+                checked={joinPaths}
+                onChange={(e) => setJoinPaths(e.target.checked)}
+              />
+              Join paths
             </label>
           </div>
           {progress && (

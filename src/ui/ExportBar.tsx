@@ -21,6 +21,7 @@ export function ExportBar({ artwork, currentParams }: Props) {
   const layerParams = useApp((s) => s.layerParams);
   const [copied, setCopied] = useState(false);
   const [dedupe, setDedupe] = useState(false);
+  const [join, setJoin] = useState(false);
 
   const copyShareLink = async () => {
     const payload: SharePayload = {
@@ -104,8 +105,19 @@ export function ExportBar({ artwork, currentParams }: Props) {
         />
         Dedupe paths
       </label>
+      <label
+        title="Joins open polylines whose endpoints touch into longer continuous paths, reducing pen lifts."
+        style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+      >
+        <input
+          type="checkbox"
+          checked={join}
+          onChange={(e) => setJoin(e.target.checked)}
+        />
+        Join paths
+      </label>
       <button
-        onClick={() => downloadSvg(artwork, `${generatorId}-${seed}.svg`, { dedupe })}
+        onClick={() => downloadSvg(artwork, `${generatorId}-${seed}.svg`, { dedupe, join })}
         style={{ ...btnStyle, background: "#e96a3a", color: "#fff" }}
       >
         ⬇ SVG
