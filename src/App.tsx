@@ -11,6 +11,7 @@ import { LayerStack } from "./ui/LayerStack";
 import { LayerControls } from "./ui/LayerControls";
 import { readHash } from "./state/urlSync";
 import type { Artwork } from "./generators/types";
+import { PlotterPanel } from "./ui/PlotterPanel";
 
 // Hash layer UID to a stable per-layer seed offset so each layer is deterministic.
 const hashUid = (uid: string): number => {
@@ -55,6 +56,7 @@ function Stage({ generatorId }: { generatorId: string }) {
       ))}
       <CanvasPreview artwork={finalArt} />
       <ExportBar artwork={finalArt} currentParams={baseParams as Record<string, unknown>} />
+      <PlotterPanel artwork={finalArt} />
     </>
   );
 }

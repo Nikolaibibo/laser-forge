@@ -25,6 +25,13 @@ export type AppState = {
   setLayerParams: (uid: string, params: Record<string, unknown>) => void;
   clearLayers: () => void;
   hydrate: (state: Partial<AppState>) => void;
+  // Plotter state (PlotterPort instance lives in a useRef in PlotterPanel — not stored here)
+  plotterConnected: boolean;
+  plotterState: string;
+  plotterProgress: { done: number; total: number } | null;
+  setPlotterConnected: (v: boolean) => void;
+  setPlotterState: (v: string) => void;
+  setPlotterProgress: (v: { done: number; total: number } | null) => void;
 };
 
 let uidCounter = 0;
@@ -70,4 +77,10 @@ export const useApp = create<AppState>((set) => ({
     set((s) => ({ layerParams: { ...s.layerParams, [uid]: params } })),
   clearLayers: () => set({ layers: [], layerParams: {} }),
   hydrate: (s) => set(s),
+  plotterConnected: false,
+  plotterState: "Disconnected",
+  plotterProgress: null,
+  setPlotterConnected: (v) => set({ plotterConnected: v }),
+  setPlotterState: (v) => set({ plotterState: v }),
+  setPlotterProgress: (v) => set({ plotterProgress: v }),
 }));
