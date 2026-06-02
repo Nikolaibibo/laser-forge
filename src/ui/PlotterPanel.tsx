@@ -1,11 +1,14 @@
 import { useRef, useState } from "react";
-import type { Artwork } from "../generators/types";
+import { useApp } from "../state/store";
 import { PlotterPort } from "../plotter/webserial";
 import { Grbl } from "../plotter/grbl";
 import { artworkToGcode, outlineGcode, bbox, DEFAULT_PEN } from "../plotter/gcode";
 import { streamJob } from "../plotter/streamJob";
 
-export function PlotterPanel({ artwork }: { artwork: Artwork }) {
+export function PlotterPanel() {
+  // Read the current artwork from the store (the panel lives outside the
+  // key-remounted Stage so the connection survives generator switches).
+  const artwork = useApp((s) => s.currentArtwork);
   const portRef = useRef<PlotterPort | null>(null);
   const grblRef = useRef<Grbl | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -37,6 +40,7 @@ export function PlotterPanel({ artwork }: { artwork: Artwork }) {
   const g = () => grblRef.current!;
 
   async function plot() {
+    if (!artwork) return;
     const lines = artworkToGcode(artwork, { ...DEFAULT_PEN, feed });
     abortRef.current = new AbortController();
     try {
@@ -53,6 +57,7 @@ export function PlotterPanel({ artwork }: { artwork: Artwork }) {
   }
 
   async function outline(draw: boolean) {
+    if (!artwork) return;
     try {
       await streamJob(
         portRef.current!,

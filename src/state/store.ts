@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Artwork } from "../generators/types";
 
 export type Layer = {
   uid: string;
@@ -32,6 +33,10 @@ export type AppState = {
   setPlotterConnected: (v: boolean) => void;
   setPlotterState: (v: string) => void;
   setPlotterProgress: (v: { done: number; total: number } | null) => void;
+  /** Current rendered artwork, published by Stage so the (stable) PlotterPanel can read it
+   *  without living inside the key-remounted Stage subtree. */
+  currentArtwork: Artwork | null;
+  setCurrentArtwork: (a: Artwork | null) => void;
 };
 
 let uidCounter = 0;
@@ -83,4 +88,6 @@ export const useApp = create<AppState>((set) => ({
   setPlotterConnected: (v) => set({ plotterConnected: v }),
   setPlotterState: (v) => set({ plotterState: v }),
   setPlotterProgress: (v) => set({ plotterProgress: v }),
+  currentArtwork: null,
+  setCurrentArtwork: (a) => set({ currentArtwork: a }),
 }));

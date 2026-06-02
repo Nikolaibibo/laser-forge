@@ -49,6 +49,12 @@ function Stage({ generatorId }: { generatorId: string }) {
     return cur;
   }, [baseArt, layers, layerParams, seed]);
 
+  // Publish the current artwork so the (stable, non-remounted) PlotterPanel can read it.
+  const setCurrentArtwork = useApp((s) => s.setCurrentArtwork);
+  useEffect(() => {
+    setCurrentArtwork(finalArt);
+  }, [finalArt, setCurrentArtwork]);
+
   return (
     <>
       {layers.map((l, i) => (
@@ -56,7 +62,6 @@ function Stage({ generatorId }: { generatorId: string }) {
       ))}
       <CanvasPreview artwork={finalArt} />
       <ExportBar artwork={finalArt} currentParams={baseParams as Record<string, unknown>} />
-      <PlotterPanel artwork={finalArt} />
     </>
   );
 }
@@ -142,6 +147,7 @@ export default function App() {
         }}
       >
         <Stage key={generatorId} generatorId={generatorId} />
+        <PlotterPanel />
       </main>
 
       <aside
