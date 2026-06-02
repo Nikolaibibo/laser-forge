@@ -52,15 +52,23 @@ export function PlotterPanel({ artwork }: { artwork: Artwork }) {
     }
   }
 
-  async function outline() {
+  async function outline(draw: boolean) {
     try {
       await streamJob(
         portRef.current!,
-        outlineGcode(bbox(artwork), { ...DEFAULT_PEN, feed }),
+        outlineGcode(bbox(artwork), { ...DEFAULT_PEN, feed }, draw),
         {},
       );
     } catch (e) {
       console.warn("outline stopped", e);
+    }
+  }
+
+  async function goHome() {
+    try {
+      await g().park();
+    } catch (e) {
+      console.warn("go-to-origin failed", e);
     }
   }
 
@@ -94,6 +102,9 @@ export function PlotterPanel({ artwork }: { artwork: Artwork }) {
             <button style={btn} onClick={() => g().setOrigin()}>
               Set origin here
             </button>
+            <button style={btn} onClick={goHome}>
+              Go to origin
+            </button>
           </div>
           <div style={row}>
             <button style={btn} onClick={() => g().jog(0, step)}>
@@ -115,8 +126,11 @@ export function PlotterPanel({ artwork }: { artwork: Artwork }) {
             </select>
           </div>
           <div style={row}>
-            <button style={btn} onClick={outline}>
+            <button style={btn} onClick={() => outline(true)}>
               Outline
+            </button>
+            <button style={btn} onClick={() => outline(false)}>
+              Trace (dry)
             </button>
             <button
               style={{ ...btn, background: "#e96a3a", color: "#fff" }}

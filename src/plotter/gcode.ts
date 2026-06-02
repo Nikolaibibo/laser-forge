@@ -161,7 +161,8 @@ export function bbox(art: Artwork): [number, number, number, number] {
  */
 export function outlineGcode(
   box: [number, number, number, number],
-  opts: PenOpts = DEFAULT_PEN
+  opts: PenOpts = DEFAULT_PEN,
+  draw = true
 ): string[] {
   const [x0, y0, x1, y1] = box;
   const { feed, penUp, penDown, dwellUp, dwellDown } = opts;
@@ -176,11 +177,13 @@ export function outlineGcode(
   // Travel to start corner
   lines.push(`G0 X${f(x0)} Y${f(y0)}`);
 
-  // Pen down
-  lines.push(penDown);
-  lines.push(`G4 P${dwellDown}`);
+  // Pen down only when drawing; a dry positioning trace keeps the pen up.
+  if (draw) {
+    lines.push(penDown);
+    lines.push(`G4 P${dwellDown}`);
+  }
 
-  // Draw four sides back to start
+  // Four sides back to start (drawn if pen down, else dry trace)
   lines.push(`G1 X${f(x1)} Y${f(y0)} F${feed}`);
   lines.push(`G1 X${f(x1)} Y${f(y1)} F${feed}`);
   lines.push(`G1 X${f(x0)} Y${f(y1)} F${feed}`);
