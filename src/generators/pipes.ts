@@ -36,9 +36,11 @@ function sampleArc(cx: number, cy: number, a0: number, a1: number, r: number, n:
 export type Pair = "NS" | "WE" | "NE" | "NW" | "SE" | "SW";
 
 /**
- * Wählt für eine Zelle die zwei (oder null) offenen Kanten, sodass der
- * Zellgrad (n+w+e+s) ∈ {0,2} ist (kreuzungsfrei). N und W sind bereits
- * vom Sweep festgelegt; e und s werden hier gewählt.
+ * Picks the two (or zero) open edges for a cell so its degree (n+w+e+s) is 0 or 2
+ * (crossing-free). N and W are already fixed by the sweep; this chooses e and s.
+ * The returned `pair` labels the two edges the tile's stroke connects — e.g. for
+ * inDeg===2 the pair "NW" connects the incoming North and West edges (both consumed,
+ * no new edge opens).
  */
 export function chooseTile(
   n: 0 | 1, w: 0 | 1, rng: RNG, straightness: number, density: number,
