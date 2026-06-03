@@ -18,6 +18,8 @@ const s = serpentineCenterline(4, 80, 12, 6);
 for (const h of [0, 12, 24, 36]) {
   ok(s.some(([, y]) => near(y, h, 1e-6)), `has a point at run height y=${h}`);
 }
+// left cap bulges to x ≈ -r = -6 (rs=12)
+ok(s.some(([x]) => near(x, -6, 0.5)), "left cap bulges to ~-r");
 // continuity: consecutive points never jump more than ~ runLength + a bit (no teleport)
 let maxJump = 0;
 for (let i = 1; i < s.length; i++) {

@@ -28,7 +28,8 @@ export function serpentineCenterline(
       const cx = endX;            // right side (x=L) after even runs, left (x=0) after odd
       const cy = y + r;
       const a0 = -Math.PI / 2;
-      const a1 = even ? Math.PI / 2 : (-3 * Math.PI) / 2; // even bulges +x, odd bulges -x
+      // even: CCW +π sweep (−π/2→+π/2), bulges +x;  odd: CW −π sweep (−π/2→−3π/2), bulges −x
+      const a1 = even ? Math.PI / 2 : (-3 * Math.PI) / 2;
       for (let k = 1; k <= capSamples; k++) {
         const t = a0 + ((a1 - a0) * k) / capSamples;
         pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]);
