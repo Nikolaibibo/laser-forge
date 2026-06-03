@@ -1,6 +1,6 @@
 // src/generators/meander.ts
-import type { GeneratorDef, Point, Polyline } from "./types";
-import { makeRng, type RNG } from "../util/random";
+import type { GeneratorDef, Point } from "./types";
+import { makeRng, pick, type RNG } from "../util/random";
 import { fitToCanvas } from "../util/path";
 import { offsetPath, symmetricOffsets } from "../util/offset";
 
@@ -24,6 +24,7 @@ function selfAvoidingWalk(rng: RNG, cols: number, rows: number, target: number):
   const key = (x: number, y: number) => y * cols + x;
   const visited = new Set<number>();
   const path: Point[] = [];
+  // Zufälliger Startpunkt — reseed verschiebt das Muster (gewollt).
   let x = Math.floor(rng() * cols), y = Math.floor(rng() * rows);
   visited.add(key(x, y)); path.push([x, y]);
   const dirs: Point[] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -39,8 +40,8 @@ function selfAvoidingWalk(rng: RNG, cols: number, rows: number, target: number):
       [x, y] = top;
       continue;
     }
-    const pick = opts[Math.floor(rng() * opts.length)];
-    [x, y] = pick;
+    const next = pick(rng, opts);
+    [x, y] = next;
     visited.add(key(x, y)); path.push([x, y]); stack.push([x, y]);
   }
   return path;
@@ -93,7 +94,10 @@ export const meander: GeneratorDef<Params> = {
     const cells = selfAvoidingWalk(rng, cols, rows, target);
 
     const bandWidth = (p.lanes - 1) * p.laneSpacingMm;
-    const cellMm = 10; // Roh-Skala; fitToCanvas normalisiert am Ende
+    // cellMm muss groß genug sein, dass die gerundete Kehre das ganze Band fasst
+    // (sonst kollabieren innere Spuren). Skaliert mit der Bandbreite, nicht mit dem Radius
+    // — fitToCanvas normalisiert die absolute Größe am Ende ohnehin.
+    const cellMm = Math.max(10, bandWidth + 2 * p.laneSpacingMm);
     const r = Math.max(p.turnRadiusMm, bandWidth / 2 + p.laneSpacingMm);
     const center = roundCorners(cells, cellMm, r);
 
@@ -101,7 +105,7 @@ export const meander: GeneratorDef<Params> = {
       minInnerRadiusMm: p.laneSpacingMm,
     });
 
-    const fitted = fitToCanvas(lanes as Polyline[], canvas.wMm, canvas.hMm, p.marginMm);
+    const fitted = fitToCanvas(lanes, canvas.wMm, canvas.hMm, p.marginMm);
     return { polylines: fitted, widthMm: canvas.wMm, heightMm: canvas.hMm };
   },
 };
