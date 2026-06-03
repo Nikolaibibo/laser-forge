@@ -24,10 +24,26 @@ ok(mono.polylines.every((l) => l.stroke === undefined), "colorFraction 0 → all
 const colored = pipes.generate({ ...p, colorFraction: 1 }, 7, canvas);
 ok(colored.polylines.some((l) => typeof l.stroke === "string"), "colorFraction 1 → some colored");
 
-// Bögen-only: mergePaths muss Striche zu weniger, längeren Components verketten
-const arcsOnly = pipes.generate({ ...p, straightness: 0, colorFraction: 0 }, 7, canvas);
+// classic-spezifisch: cross/arc-Tiles, mergePaths verkettet zu weniger Components
+const arcsOnly = pipes.generate({ ...p, model: "classic", straightness: 0, colorFraction: 0 }, 7, canvas);
 const rawUpper = 2 * Math.floor(p.cols) * Math.floor(p.rows) * p.lanes;
 ok(arcsOnly.polylines.length < rawUpper, "mergePaths chained strokes into fewer components");
+
+// --- wang model end-to-end ---
+const wcanvas = { wMm: 200, hMm: 200 };
+const wp = { ...pipes.defaults, model: "wang" };
+const w1 = pipes.generate(wp, 7, wcanvas);
+const w2 = pipes.generate(wp, 7, wcanvas);
+ok(w1.polylines.length > 0, "wang: produces polylines");
+ok(JSON.stringify(w1) === JSON.stringify(w2), "wang: deterministic same seed");
+const wm = wp.marginMm;
+ok(w1.polylines.every((l) => l.points.every(([x, y]) =>
+   x >= wm - 1 && x <= 200 - wm + 1 && y >= wm - 1 && y <= 200 - wm + 1)),
+   "wang: all points within margin");
+ok(pipes.generate({ ...wp, colorFraction: 0 }, 7, wcanvas).polylines.every((l) => l.stroke === undefined),
+   "wang: colorFraction 0 → all mono");
+ok(pipes.generate({ ...wp, colorFraction: 1 }, 7, wcanvas).polylines.some((l) => typeof l.stroke === "string"),
+   "wang: colorFraction 1 → some colored");
 
 console.log(failed === 0 ? "ALL PASS" : `${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

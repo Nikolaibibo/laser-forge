@@ -7,19 +7,22 @@ import { offsetPath, symmetricOffsets } from "../util/offset";
 import { mergePaths } from "../util/mergePaths";
 
 type Params = {
+  model: "classic" | "wang";
   cols: number;
   rows: number;
   lanes: number;
   laneSpacingMm: number;
   straightness: number;   // 0..1 share of cross tiles
+  density: number;        // 0..1 edge-open probability (wang model)
   colorFraction: number;  // 0..1 share of colored components
   arcSamples: number;
   marginMm: number;
 };
 
 const DEFAULTS: Params = {
+  model: "wang",
   cols: 14, rows: 18, lanes: 6, laneSpacingMm: 0.7,
-  straightness: 0.55, colorFraction: 0.35, arcSamples: 14, marginMm: 15,
+  straightness: 0.55, density: 0.5, colorFraction: 0.35, arcSamples: 14, marginMm: 15,
 };
 
 const PALETTE = ["#e0584f", "#4f86e0", "#5fcaa8"];
@@ -128,6 +131,21 @@ export function wangField(
   return strokes;
 }
 
+function classicField(
+  cols: number, rows: number, c: number, arcSamples: number, straightness: number, rng: RNG,
+): Polyline[] {
+  const strokes: Polyline[] = [];
+  for (let cy = 0; cy < rows; cy++) {
+    for (let cx = 0; cx < cols; cx++) {
+      const kind = rng() < straightness ? "cross" : (rng() < 0.5 ? "arcA" : "arcB");
+      for (const pts of tileStrokes(kind, cx * c, cy * c, c, arcSamples)) {
+        strokes.push({ points: pts, closed: false });
+      }
+    }
+  }
+  return strokes;
+}
+
 export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",
@@ -135,11 +153,13 @@ export const pipes: GeneratorDef<Params> = {
     "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes. Reseed reshuffles the field.",
   defaults: DEFAULTS,
   schema: {
+    model: { value: DEFAULTS.model, options: ["wang", "classic"] },
     cols: { value: DEFAULTS.cols, min: 3, max: 40, step: 1 },
     rows: { value: DEFAULTS.rows, min: 3, max: 40, step: 1 },
     lanes: { value: DEFAULTS.lanes, min: 2, max: 16, step: 1 },
     laneSpacingMm: { value: DEFAULTS.laneSpacingMm, min: 0.3, max: 3, step: 0.1 },
     straightness: { value: DEFAULTS.straightness, min: 0, max: 1, step: 0.05 },
+    density: { value: DEFAULTS.density, min: 0, max: 1, step: 0.05 },
     colorFraction: { value: DEFAULTS.colorFraction, min: 0, max: 1, step: 0.05 },
     arcSamples: { value: DEFAULTS.arcSamples, min: 4, max: 32, step: 1 },
     marginMm: { value: DEFAULTS.marginMm, min: 0, max: 40, step: 1 },
@@ -151,15 +171,9 @@ export const pipes: GeneratorDef<Params> = {
     const bandHalf = ((p.lanes - 1) * p.laneSpacingMm) / 2;
     const c = Math.max(10, (bandHalf + 2 * p.laneSpacingMm) * 2);
 
-    const strokes: Polyline[] = [];
-    for (let cy = 0; cy < rows; cy++) {
-      for (let cx = 0; cx < cols; cx++) {
-        const kind = rng() < p.straightness ? "cross" : (rng() < 0.5 ? "arcA" : "arcB");
-        for (const pts of tileStrokes(kind, cx * c, cy * c, c, p.arcSamples)) {
-          strokes.push({ points: pts, closed: false });
-        }
-      }
-    }
+    const strokes = p.model === "wang"
+      ? wangField(cols, rows, c, p.arcSamples, p.straightness, p.density, rng)
+      : classicField(cols, rows, c, p.arcSamples, p.straightness, rng);
 
     const components = mergePaths(strokes, 1e-3);
 
