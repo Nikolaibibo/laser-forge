@@ -1,5 +1,5 @@
 // scripts/pipes-wang-test.mjs
-import { chooseTile } from "../src/generators/pipes.ts";
+import { chooseTile, wangTileStroke } from "../src/generators/pipes.ts";
 
 let failed = 0;
 const ok = (c, m) => { if (!c) { console.error("FAIL:", m); failed++; } };
@@ -43,8 +43,6 @@ ok(chooseTile(0, 1, rngHigh, 0, 0).pair === "SW", "w only, straightness 0 → SW
 // density: inDeg==0
 ok(chooseTile(0, 0, rngLow, 0.5, 1).pair === "SE", "empty in, density 1 → SE birth");
 ok(chooseTile(0, 0, rngLow, 0.5, 0).pair === null, "empty in, density 0 → empty");
-
-import { wangTileStroke } from "../src/generators/pipes.ts";
 
 const near = (a, b) => Math.abs(a - b) < 1e-6;
 const x0 = 10, y0 = 20, c = 8, r = c / 2;

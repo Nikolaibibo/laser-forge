@@ -94,6 +94,7 @@ export function wangTileStroke(
     case "NW": return sampleArc(x0, y0, 0, Math.PI / 2, r, arcSamples);
     case "SW": return sampleArc(x0, y0 + c, 0, -Math.PI / 2, r, arcSamples);
     case "SE": return sampleArc(x0 + c, y0 + c, Math.PI, (3 * Math.PI) / 2, r, arcSamples);
+    default: pair satisfies never; return [];
   }
 }
 
