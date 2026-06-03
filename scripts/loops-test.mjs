@@ -1,5 +1,6 @@
 // scripts/loops-test.mjs
 import { serpentineCenterline } from "../src/generators/loops.ts";
+import { rotateTranslate } from "../src/generators/loops.ts";
 
 let failed = 0;
 const ok = (c, m) => { if (!c) { console.error("FAIL:", m); failed++; } };
@@ -31,6 +32,18 @@ ok(maxJump <= 80 + 1, "C0 continuous: no gap larger than a run length");
 // pure / deterministic
 ok(JSON.stringify(serpentineCenterline(3, 50, 8, 6)) === JSON.stringify(serpentineCenterline(3, 50, 8, 6)),
    "deterministic (pure geometry)");
+
+// 90° CCW about origin, no translate: (1,0) → (0,1)
+const r90 = rotateTranslate([[1, 0]], Math.PI / 2, 0, 0, 0, 0);
+ok(near(r90[0][0], 0) && near(r90[0][1], 1), "rotate 90° about origin: (1,0)->(0,1)");
+
+// rotation about pivot (5,5) leaves the pivot fixed; +translate moves it
+const piv = rotateTranslate([[5, 5]], 1.234, 5, 5, 3, -2);
+ok(near(piv[0][0], 8) && near(piv[0][1], 3), "pivot point maps to pivot + translation");
+
+// length preserved between two points under rotation
+const a = rotateTranslate([[0, 0], [3, 4]], 0.7, 0, 0, 10, 20);
+ok(near(Math.hypot(a[1][0] - a[0][0], a[1][1] - a[0][1]), 5), "distance preserved (3-4-5)");
 
 console.log(failed === 0 ? "ALL PASS" : `${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

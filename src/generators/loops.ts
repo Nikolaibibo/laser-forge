@@ -38,3 +38,14 @@ export function serpentineCenterline(
   }
   return pts;
 }
+
+/** Rotate points around pivot (cx,cy) by angleRad, then translate by (tx,ty). Pure. */
+export function rotateTranslate(
+  pts: Point[], angleRad: number, cx: number, cy: number, tx: number, ty: number,
+): Point[] {
+  const c = Math.cos(angleRad), s = Math.sin(angleRad);
+  return pts.map(([x, y]): Point => {
+    const dx = x - cx, dy = y - cy;
+    return [cx + dx * c - dy * s + tx, cy + dx * s + dy * c + ty];
+  });
+}
