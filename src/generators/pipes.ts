@@ -81,6 +81,22 @@ function tileStrokes(
   ];
 }
 
+export function wangTileStroke(
+  pair: Pair, x0: number, y0: number, c: number, arcSamples: number,
+): Point[] {
+  const r = c / 2;
+  const N: Point = [x0 + r, y0], S: Point = [x0 + r, y0 + c];
+  const W: Point = [x0, y0 + r], E: Point = [x0 + c, y0 + r];
+  switch (pair) {
+    case "NS": return [N, S];
+    case "WE": return [W, E];
+    case "NE": return sampleArc(x0 + c, y0, Math.PI, Math.PI / 2, r, arcSamples);
+    case "NW": return sampleArc(x0, y0, 0, Math.PI / 2, r, arcSamples);
+    case "SW": return sampleArc(x0, y0 + c, 0, -Math.PI / 2, r, arcSamples);
+    case "SE": return sampleArc(x0 + c, y0 + c, Math.PI, (3 * Math.PI) / 2, r, arcSamples);
+  }
+}
+
 export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",

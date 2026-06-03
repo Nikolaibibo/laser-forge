@@ -44,5 +44,27 @@ ok(chooseTile(0, 1, rngHigh, 0, 0).pair === "SW", "w only, straightness 0 → SW
 ok(chooseTile(0, 0, rngLow, 0.5, 1).pair === "SE", "empty in, density 1 → SE birth");
 ok(chooseTile(0, 0, rngLow, 0.5, 0).pair === null, "empty in, density 0 → empty");
 
+import { wangTileStroke } from "../src/generators/pipes.ts";
+
+const near = (a, b) => Math.abs(a - b) < 1e-6;
+const x0 = 10, y0 = 20, c = 8, r = c / 2;
+const MID = {
+  N: [x0 + r, y0], S: [x0 + r, y0 + c], W: [x0, y0 + r], E: [x0 + c, y0 + r],
+};
+for (const [pair, [a, b]] of Object.entries({
+  NS: ["N", "S"], WE: ["W", "E"], NE: ["N", "E"], NW: ["N", "W"], SE: ["S", "E"], SW: ["S", "W"],
+})) {
+  const pts = wangTileStroke(pair, x0, y0, c, 12);
+  ok(pts.length >= 2, `${pair}: at least 2 points`);
+  const first = pts[0], last = pts[pts.length - 1];
+  const ma = MID[a], mb = MID[b];
+  const startsA = near(first[0], ma[0]) && near(first[1], ma[1]);
+  const startsB = near(first[0], mb[0]) && near(first[1], mb[1]);
+  const endsOther = startsA
+    ? near(last[0], mb[0]) && near(last[1], mb[1])
+    : near(last[0], ma[0]) && near(last[1], ma[1]);
+  ok((startsA || startsB) && endsOther, `${pair}: endpoints land on edge midpoints ${a}/${b}`);
+}
+
 console.log(failed === 0 ? "ALL PASS" : `${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);
