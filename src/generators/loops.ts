@@ -117,6 +117,8 @@ export const loops: GeneratorDef<Params> = {
       const ty = randRange(rng, 0, canvas.hMm);
       const center = serpentineCenterline(runs, len, p.runSpacingMm, p.capSamples);
       const [cx, cy] = boundsCenter(center);
+      // Note: placed bbox center lands at (cx+tx, cy+ty), not (tx, ty);
+      // fitToCanvas normalises the whole artwork afterward, so the offset is harmless.
       const placed = rotateTranslate(center, angle, cx, cy, tx, ty);
       const stroke = PALETTE[i % numColors];
       for (const lane of offsetPath(placed, offsets, { minInnerRadiusMm: p.laneSpacingMm })) {

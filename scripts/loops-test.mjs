@@ -1,6 +1,5 @@
 // scripts/loops-test.mjs
-import { serpentineCenterline } from "../src/generators/loops.ts";
-import { rotateTranslate } from "../src/generators/loops.ts";
+import { serpentineCenterline, rotateTranslate, loops } from "../src/generators/loops.ts";
 
 let failed = 0;
 const ok = (c, m) => { if (!c) { console.error("FAIL:", m); failed++; } };
@@ -44,8 +43,6 @@ ok(near(piv[0][0], 8) && near(piv[0][1], 3), "pivot point maps to pivot + transl
 // length preserved between two points under rotation
 const a = rotateTranslate([[0, 0], [3, 4]], 0.7, 0, 0, 10, 20);
 ok(near(Math.hypot(a[1][0] - a[0][0], a[1][1] - a[0][1]), 5), "distance preserved (3-4-5)");
-
-import { loops } from "../src/generators/loops.ts";
 
 const canvas = { wMm: 200, hMm: 280 };
 const p = { ...loops.defaults };
