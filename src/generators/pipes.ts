@@ -12,7 +12,7 @@ type Params = {
   rows: number;
   lanes: number;
   laneSpacingMm: number;
-  straightness: number;   // 0..1 share of cross tiles
+  straightness: number;   // classic = P(cross tile); wang = P(straight pass-through at a turn)
   density: number;        // 0..1 edge-open probability (wang model)
   colorFraction: number;  // 0..1 share of colored components
   arcSamples: number;
@@ -150,7 +150,7 @@ export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",
   description:
-    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes. Reseed reshuffles the field.",
+    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes. model switches between 'wang' (distinct non-crossing pipes, default) and 'classic' (crossing Truchet grid); density (wang only) sets how densely pipes fill the field. Reseed reshuffles the field.",
   defaults: DEFAULTS,
   schema: {
     model: { value: DEFAULTS.model, options: ["wang", "classic"] },
