@@ -5,6 +5,7 @@ import { Grbl } from "../plotter/grbl";
 import { artworkToGcode, outlineGcode, bbox, DEFAULT_PEN } from "../plotter/gcode";
 import { streamJob } from "../plotter/streamJob";
 import { mergePaths } from "../util/mergePaths";
+import { splitByStroke } from "../plotter/penSplit";
 
 export function PlotterPanel() {
   // Read the current artwork from the store (the panel lives outside the
@@ -55,6 +56,40 @@ export function PlotterPanel() {
       });
     } catch (e) {
       console.warn("plot stopped", e);
+    } finally {
+      setProgress(null);
+    }
+  }
+
+  async function plotByColor() {
+    if (!artwork) return;
+    const groups = splitByStroke(artwork.polylines);
+    abortRef.current = new AbortController();
+    try {
+      for (let gi = 0; gi < groups.length; gi++) {
+        const grp = groups[gi];
+        if (abortRef.current.signal.aborted) break;
+        if (gi > 0) {
+          // pen swap: lift + park, then wait for confirmation. Origin is preserved (no re-home).
+          await g().park();
+          const cont = window.confirm(
+            `Stift ${gi + 1}/${groups.length} einsetzen: ${grp.stroke}\n\nOK = weiter plotten · Abbrechen = stoppen.`,
+          );
+          if (!cont) {
+            abortRef.current.abort();
+            break;
+          }
+        }
+        const polys = joinPaths ? mergePaths(grp.polylines) : grp.polylines;
+        const lines = artworkToGcode({ ...artwork, polylines: polys }, { ...DEFAULT_PEN, feed });
+        await streamJob(portRef.current!, lines, {
+          signal: abortRef.current.signal,
+          penUp: DEFAULT_PEN.penUp,
+          onProgress: (done, total) => setProgress({ done, total }),
+        });
+      }
+    } catch (e) {
+      console.warn("plot-by-color stopped", e);
     } finally {
       setProgress(null);
     }
@@ -148,6 +183,9 @@ export function PlotterPanel() {
               onClick={plot}
             >
               Plot
+            </button>
+            <button style={btn} onClick={plotByColor}>
+              Plot by color
             </button>
             <button style={btn} onClick={() => abortRef.current?.abort()}>
               Stop
