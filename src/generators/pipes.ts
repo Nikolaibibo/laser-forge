@@ -159,7 +159,7 @@ export const pipes: GeneratorDef<Params> = {
     lanes: { value: DEFAULTS.lanes, min: 2, max: 16, step: 1 },
     laneSpacingMm: { value: DEFAULTS.laneSpacingMm, min: 0.3, max: 3, step: 0.1 },
     straightness: { value: DEFAULTS.straightness, min: 0, max: 1, step: 0.05 },
-    density: { value: DEFAULTS.density, min: 0, max: 1, step: 0.05 },
+    density: { value: DEFAULTS.density, min: 0.05, max: 1, step: 0.05 },
     colorFraction: { value: DEFAULTS.colorFraction, min: 0, max: 1, step: 0.05 },
     arcSamples: { value: DEFAULTS.arcSamples, min: 4, max: 32, step: 1 },
     marginMm: { value: DEFAULTS.marginMm, min: 0, max: 40, step: 1 },

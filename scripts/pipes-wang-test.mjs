@@ -77,5 +77,28 @@ const sparse = wangField(14, 18, 8, 12, 0.55, 0, makeRng(7));
 const dense = wangField(14, 18, 8, 12, 0.55, 1, makeRng(7));
 ok(sparse.length < dense.length, "higher density → more strokes");
 
+// Field-level degree invariant: replicate the wangField sweep and assert every cell degree ∈ {0,2}
+{
+  const cols = 14, rows = 18, straightness = 0.55, density = 0.5;
+  const rng = makeRng(7);
+  const H = Array.from({ length: cols }, () => Array(rows + 1).fill(false));
+  const V = Array.from({ length: cols + 1 }, () => Array(rows).fill(false));
+  for (let x = 0; x < cols; x++) if (rng() < density) H[x][0] = true;
+  for (let y = 0; y < rows; y++) if (rng() < density) V[0][y] = true;
+  let bad = 0;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const n = H[x][y] ? 1 : 0;
+      const w = V[x][y] ? 1 : 0;
+      const { e, s } = chooseTile(n, w, rng, straightness, density);
+      H[x][y + 1] = s === 1;
+      V[x + 1][y] = e === 1;
+      const deg = n + w + e + s;
+      if (deg !== 0 && deg !== 2) bad++;
+    }
+  }
+  ok(bad === 0, `field-level: every cell degree in {0,2} (found ${bad} violations)`);
+}
+
 console.log(failed === 0 ? "ALL PASS" : `${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);
