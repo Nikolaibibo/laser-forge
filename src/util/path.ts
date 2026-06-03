@@ -44,6 +44,7 @@ export const fitToCanvas = (
   const offsetY = marginMm + (availH - srcH * scale) / 2 - b.minY * scale;
   return lines.map((l) => ({
     closed: l.closed,
+    stroke: l.stroke,
     points: l.points.map(([x, y]): Point => [x * scale + offsetX, y * scale + offsetY]),
   }));
 };

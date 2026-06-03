@@ -9,7 +9,7 @@ import { attractor } from "./attractor";
 import { rose } from "./rose";
 import { spirograph } from "./spirograph";
 import { truchet } from "./truchet";
-import { meander } from "./meander";
+import { pipes } from "./pipes";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATORS: GeneratorDef<any>[] = [
@@ -23,7 +23,7 @@ export const GENERATORS: GeneratorDef<any>[] = [
   voronoi,
   lSystem,
   differentialGrowth,
-  meander,
+  pipes,
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
