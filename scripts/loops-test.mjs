@@ -54,7 +54,7 @@ ok(JSON.stringify(a1) === JSON.stringify(a2), "deterministic: same seed → iden
 ok(JSON.stringify(a1) !== JSON.stringify(loops.generate(p, 99, canvas)), "seed changes output");
 ok(a1.polylines.every((l) => l.points.length >= 2 && l.closed === false), "all plottable open polylines");
 
-// color: numColors=2 → exactly 2 distinct strokes (shapes=6 > 2)
+// color: numColors=2 → exactly 2 distinct strokes (12 shapes > 2)
 const strokes = new Set(a1.polylines.map((l) => l.stroke));
 ok(strokes.size === 2 && [...strokes].every((s) => typeof s === "string"),
    "numColors=2 → 2 distinct palette strokes");
@@ -68,6 +68,22 @@ ok(a1.polylines.every((l) => l.points.every(([x, y]) =>
 // numColors=1 → 1 distinct stroke
 const oneColor = loops.generate({ ...p, numColors: 1 }, 7, canvas);
 ok(new Set(oneColor.polylines.map((l) => l.stroke)).size === 1, "numColors=1 → 1 stroke");
+
+// even coverage: with a 3x4 grid, points appear in all four canvas quadrants
+const allPts = a1.polylines.flatMap((l) => l.points);
+const midX = 100, midY = 140;
+const quad = { tl: false, tr: false, bl: false, br: false };
+for (const [x, y] of allPts) {
+  if (x < midX && y < midY) quad.tl = true;
+  else if (x >= midX && y < midY) quad.tr = true;
+  else if (x < midX && y >= midY) quad.bl = true;
+  else quad.br = true;
+}
+ok(quad.tl && quad.tr && quad.bl && quad.br, "grid placement covers all four quadrants");
+
+// grid size drives shape count: 1x1 grid → 1 shape → 1 stroke regardless of numColors
+const single = loops.generate({ ...p, gridCols: 1, gridRows: 1 }, 7, canvas);
+ok(new Set(single.polylines.map((l) => l.stroke)).size === 1, "1x1 grid → single shape → 1 stroke");
 
 console.log(failed === 0 ? "ALL PASS" : `${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

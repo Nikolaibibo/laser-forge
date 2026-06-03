@@ -1,6 +1,6 @@
 // src/generators/loops.ts
 import type { GeneratorDef, Point, Polyline } from "./types";
-import { makeRng, randInt, randRange } from "../util/random";
+import { makeRng, randInt, randRange, pick } from "../util/random";
 import { fitToCanvas } from "../util/path";
 import { offsetPath, symmetricOffsets } from "../util/offset";
 
@@ -63,7 +63,10 @@ function boundsCenter(pts: Point[]): [number, number] {
 }
 
 type Params = {
-  shapes: number;
+  gridCols: number;
+  gridRows: number;
+  cellJitter: number;      // 0..1 fraction of cell size
+  angleJitterDeg: number;
   runsMin: number;
   runsMax: number;
   runLenMinMm: number;
@@ -77,7 +80,8 @@ type Params = {
 };
 
 const DEFAULTS: Params = {
-  shapes: 6, runsMin: 2, runsMax: 5, runLenMinMm: 40, runLenMaxMm: 110,
+  gridCols: 3, gridRows: 4, cellJitter: 0.35, angleJitterDeg: 8,
+  runsMin: 2, runsMax: 5, runLenMinMm: 60, runLenMaxMm: 150,
   runSpacingMm: 9, lanes: 14, laneSpacingMm: 0.5, numColors: 2, capSamples: 16, marginMm: 15,
 };
 
@@ -85,10 +89,13 @@ export const loops: GeneratorDef<Params> = {
   id: "loops",
   name: "Loops",
   description:
-    "Scattered overlapping serpentine ribbons (parallel runs + 180° caps) rendered as dense parallel bands; numColors pens overprint where shapes overlap (1+1=3). Reseed reshuffles placement.",
+    "Serpentine ribbons placed on a jittered grid with angles quantized to {0,45,90,135}° for even coverage and an orthogonal woven plaid look.",
   defaults: DEFAULTS,
   schema: {
-    shapes: { value: DEFAULTS.shapes, min: 1, max: 24, step: 1 },
+    gridCols: { value: DEFAULTS.gridCols, min: 1, max: 8, step: 1 },
+    gridRows: { value: DEFAULTS.gridRows, min: 1, max: 8, step: 1 },
+    cellJitter: { value: DEFAULTS.cellJitter, min: 0, max: 1, step: 0.05 },
+    angleJitterDeg: { value: DEFAULTS.angleJitterDeg, min: 0, max: 45, step: 1 },
     runsMin: { value: DEFAULTS.runsMin, min: 2, max: 12, step: 1 },
     runsMax: { value: DEFAULTS.runsMax, min: 2, max: 12, step: 1 },
     runLenMinMm: { value: DEFAULTS.runLenMinMm, min: 10, max: 250, step: 1 },
@@ -108,21 +115,31 @@ export const loops: GeneratorDef<Params> = {
     const lenLo = Math.min(p.runLenMinMm, p.runLenMaxMm);
     const lenHi = Math.max(p.runLenMinMm, p.runLenMaxMm);
     const numColors = Math.max(1, Math.min(PALETTE.length, Math.floor(p.numColors)));
+    const cols = Math.max(1, Math.floor(p.gridCols));
+    const rows = Math.max(1, Math.floor(p.gridRows));
+    const cellW = canvas.wMm / cols;
+    const cellH = canvas.hMm / rows;
+    const angleJitter = (p.angleJitterDeg * Math.PI) / 180;
+    const ANGLES = [0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4];
     const all: Polyline[] = [];
-    for (let i = 0; i < p.shapes; i++) {
-      const runs = randInt(rng, runsLo, runsHi);
-      const len = randRange(rng, lenLo, lenHi);
-      const angle = randRange(rng, 0, Math.PI);
-      const tx = randRange(rng, 0, canvas.wMm);
-      const ty = randRange(rng, 0, canvas.hMm);
-      const center = serpentineCenterline(runs, len, p.runSpacingMm, p.capSamples);
-      const [cx, cy] = boundsCenter(center);
-      // Note: placed bbox center lands at (cx+tx, cy+ty), not (tx, ty);
-      // fitToCanvas normalises the whole artwork afterward, so the offset is harmless.
-      const placed = rotateTranslate(center, angle, cx, cy, tx, ty);
-      const stroke = PALETTE[i % numColors];
-      for (const lane of offsetPath(placed, offsets, { minInnerRadiusMm: p.laneSpacingMm })) {
-        all.push({ ...lane, stroke });
+    let i = 0;
+    for (let gy = 0; gy < rows; gy++) {
+      for (let gx = 0; gx < cols; gx++) {
+        const runs = randInt(rng, runsLo, runsHi);
+        const len = randRange(rng, lenLo, lenHi);
+        const angle = pick(rng, ANGLES) + randRange(rng, -angleJitter, angleJitter);
+        // jittered cell center (target placement)
+        const tx = (gx + 0.5) * cellW + randRange(rng, -1, 1) * p.cellJitter * cellW * 0.5;
+        const ty = (gy + 0.5) * cellH + randRange(rng, -1, 1) * p.cellJitter * cellH * 0.5;
+        const center = serpentineCenterline(runs, len, p.runSpacingMm, p.capSamples);
+        const [bx, by] = boundsCenter(center);
+        // rotate about the shape's own bbox center, then move that center onto (tx,ty)
+        const placed = rotateTranslate(center, angle, bx, by, tx - bx, ty - by);
+        const stroke = PALETTE[i % numColors];
+        for (const lane of offsetPath(placed, offsets, { minInnerRadiusMm: p.laneSpacingMm })) {
+          all.push({ ...lane, stroke });
+        }
+        i++;
       }
     }
     const fitted = fitToCanvas(all, canvas.wMm, canvas.hMm, p.marginMm);
