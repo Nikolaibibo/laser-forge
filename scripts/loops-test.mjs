@@ -45,5 +45,32 @@ ok(near(piv[0][0], 8) && near(piv[0][1], 3), "pivot point maps to pivot + transl
 const a = rotateTranslate([[0, 0], [3, 4]], 0.7, 0, 0, 10, 20);
 ok(near(Math.hypot(a[1][0] - a[0][0], a[1][1] - a[0][1]), 5), "distance preserved (3-4-5)");
 
+import { loops } from "../src/generators/loops.ts";
+
+const canvas = { wMm: 200, hMm: 280 };
+const p = { ...loops.defaults };
+const a1 = loops.generate(p, 7, canvas);
+const a2 = loops.generate(p, 7, canvas);
+ok(a1.widthMm === 200 && a1.heightMm === 280, "carries canvas size");
+ok(a1.polylines.length > 0, "produces polylines");
+ok(JSON.stringify(a1) === JSON.stringify(a2), "deterministic: same seed → identical");
+ok(JSON.stringify(a1) !== JSON.stringify(loops.generate(p, 99, canvas)), "seed changes output");
+ok(a1.polylines.every((l) => l.points.length >= 2 && l.closed === false), "all plottable open polylines");
+
+// color: numColors=2 → exactly 2 distinct strokes (shapes=6 > 2)
+const strokes = new Set(a1.polylines.map((l) => l.stroke));
+ok(strokes.size === 2 && [...strokes].every((s) => typeof s === "string"),
+   "numColors=2 → 2 distinct palette strokes");
+
+// in-bounds after fitToCanvas
+const m = p.marginMm;
+ok(a1.polylines.every((l) => l.points.every(([x, y]) =>
+   x >= m - 1 && x <= 200 - m + 1 && y >= m - 1 && y <= 280 - m + 1)),
+   "all points within margin");
+
+// numColors=1 → 1 distinct stroke
+const oneColor = loops.generate({ ...p, numColors: 1 }, 7, canvas);
+ok(new Set(oneColor.polylines.map((l) => l.stroke)).size === 1, "numColors=1 → 1 stroke");
+
 console.log(failed === 0 ? "ALL PASS" : `${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

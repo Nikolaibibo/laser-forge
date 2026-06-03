@@ -10,6 +10,7 @@ import { rose } from "./rose";
 import { spirograph } from "./spirograph";
 import { truchet } from "./truchet";
 import { pipes } from "./pipes";
+import { loops } from "./loops";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATORS: GeneratorDef<any>[] = [
@@ -24,6 +25,7 @@ export const GENERATORS: GeneratorDef<any>[] = [
   lSystem,
   differentialGrowth,
   pipes,
+  loops,
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
