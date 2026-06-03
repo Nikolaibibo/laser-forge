@@ -98,6 +98,36 @@ export function wangTileStroke(
   }
 }
 
+export function wangField(
+  cols: number, rows: number, c: number, arcSamples: number,
+  straightness: number, density: number, rng: RNG,
+): Polyline[] {
+  // Edge state. H[x][y]: horizontal edge above cell (x,y); x∈[0,cols), y∈[0,rows].
+  // V[x][y]: vertical edge left of cell (x,y); x∈[0,cols], y∈[0,rows).
+  // For cell (x,y): N = H[x][y], S = H[x][y+1], W = V[x][y], E = V[x+1][y].
+  const H: boolean[][] = Array.from({ length: cols }, () => Array(rows + 1).fill(false));
+  const V: boolean[][] = Array.from({ length: cols + 1 }, () => Array(rows).fill(false));
+
+  // Boundary pre-roll: top N-edges + left W-edges each open with P(density).
+  for (let x = 0; x < cols; x++) if (rng() < density) H[x][0] = true;
+  for (let y = 0; y < rows; y++) if (rng() < density) V[0][y] = true;
+
+  const strokes: Polyline[] = [];
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const n: 0 | 1 = H[x][y] ? 1 : 0;
+      const w: 0 | 1 = V[x][y] ? 1 : 0;
+      const { e, s, pair } = chooseTile(n, w, rng, straightness, density);
+      H[x][y + 1] = s === 1;
+      V[x + 1][y] = e === 1;
+      if (pair !== null) {
+        strokes.push({ points: wangTileStroke(pair, x * c, y * c, c, arcSamples), closed: false });
+      }
+    }
+  }
+  return strokes;
+}
+
 export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",

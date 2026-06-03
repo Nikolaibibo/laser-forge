@@ -1,5 +1,6 @@
 // scripts/pipes-wang-test.mjs
-import { chooseTile, wangTileStroke } from "../src/generators/pipes.ts";
+import { chooseTile, wangTileStroke, wangField } from "../src/generators/pipes.ts";
+import { makeRng } from "../src/util/random.ts";
 
 let failed = 0;
 const ok = (c, m) => { if (!c) { console.error("FAIL:", m); failed++; } };
@@ -63,6 +64,18 @@ for (const [pair, [a, b]] of Object.entries({
     : near(last[0], ma[0]) && near(last[1], ma[1]);
   ok((startsA || startsB) && endsOther, `${pair}: endpoints land on edge midpoints ${a}/${b}`);
 }
+
+const f1 = wangField(14, 18, 8, 12, 0.55, 0.5, makeRng(7));
+const f2 = wangField(14, 18, 8, 12, 0.55, 0.5, makeRng(7));
+ok(Array.isArray(f1) && f1.length > 0, "wangField produces strokes");
+ok(JSON.stringify(f1) === JSON.stringify(f2), "wangField deterministic (same seed)");
+ok(JSON.stringify(f1) !== JSON.stringify(wangField(14, 18, 8, 12, 0.55, 0.5, makeRng(99))),
+   "wangField seed changes output");
+ok(f1.every((l) => l.points.length >= 2 && l.closed === false), "no degenerate strokes, all open");
+// density 0 + closed top/left boundary → fewer strokes than density 1
+const sparse = wangField(14, 18, 8, 12, 0.55, 0, makeRng(7));
+const dense = wangField(14, 18, 8, 12, 0.55, 1, makeRng(7));
+ok(sparse.length < dense.length, "higher density → more strokes");
 
 console.log(failed === 0 ? "ALL PASS" : `${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);
