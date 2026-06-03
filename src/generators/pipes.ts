@@ -1,6 +1,7 @@
 // src/generators/pipes.ts
 import type { GeneratorDef, Point, Polyline } from "./types";
 import { makeRng } from "../util/random";
+import type { RNG } from "../util/random";
 import { fitToCanvas } from "../util/path";
 import { offsetPath, symmetricOffsets } from "../util/offset";
 import { mergePaths } from "../util/mergePaths";
@@ -30,6 +31,27 @@ function sampleArc(cx: number, cy: number, a0: number, a1: number, r: number, n:
     pts.push([cx + Math.cos(t) * r, cy + Math.sin(t) * r]);
   }
   return pts;
+}
+
+export type Pair = "NS" | "WE" | "NE" | "NW" | "SE" | "SW";
+
+/**
+ * Wählt für eine Zelle die zwei (oder null) offenen Kanten, sodass der
+ * Zellgrad (n+w+e+s) ∈ {0,2} ist (kreuzungsfrei). N und W sind bereits
+ * vom Sweep festgelegt; e und s werden hier gewählt.
+ */
+export function chooseTile(
+  n: 0 | 1, w: 0 | 1, rng: RNG, straightness: number, density: number,
+): { e: 0 | 1; s: 0 | 1; pair: Pair | null } {
+  const inDeg = n + w;
+  if (inDeg === 2) return { e: 0, s: 0, pair: "NW" };
+  if (inDeg === 1) {
+    if (n === 1) {
+      return rng() < straightness ? { e: 0, s: 1, pair: "NS" } : { e: 1, s: 0, pair: "NE" };
+    }
+    return rng() < straightness ? { e: 1, s: 0, pair: "WE" } : { e: 0, s: 1, pair: "SW" };
+  }
+  return rng() < density ? { e: 1, s: 1, pair: "SE" } : { e: 0, s: 0, pair: null };
 }
 
 /** Two strokes (open point lists) of a tile. y points down (screen convention). */
