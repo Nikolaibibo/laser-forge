@@ -33,7 +33,9 @@ export const svgExport = (art: Artwork, opts: SvgExportOptions = {}): string => 
           .map(([x, y], i) => (i === 0 ? `${round(x)},${round(y)}` : `L ${round(x)},${round(y)}`))
           .join(" ") +
         (l.closed ? " Z" : "");
-      return `<path d="${d}"/>`;
+      return l.stroke
+        ? `<path d="${d}" stroke="${l.stroke}"/>`
+        : `<path d="${d}"/>`;
     })
     .join("\n  ");
 

@@ -5,6 +5,7 @@ export type Point = [number, number];
 export type Polyline = {
   points: Point[];
   closed: boolean;
+  stroke?: string; // CSS/Hex color; undefined = default pen
 };
 
 export type Artwork = {

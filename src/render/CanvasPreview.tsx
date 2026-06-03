@@ -53,6 +53,7 @@ export function CanvasPreview({ artwork }: Props) {
 
       for (const line of artwork.polylines) {
         if (line.points.length < 2) continue;
+        ctx.strokeStyle = line.stroke ?? "#111";
         ctx.beginPath();
         ctx.moveTo(line.points[0][0], line.points[0][1]);
         for (let i = 1; i < line.points.length; i++) {
