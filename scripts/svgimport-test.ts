@@ -57,5 +57,16 @@ assert.throws(() => parseSvgMotif(wrap('<g transform="rotate(45)"><path d="M 0 0
 assert.throws(() => parseSvgMotif(wrap("")), /no drawable/);
 // 11. not an svg → throws
 assert.throws(() => parseSvgMotif("<html></html>"), /not an SVG/);
+// 12. viewBox with non-zero minX/minY → offset subtracted
+{
+  const r = parseSvgMotif(wrap('<path d="M 50 20 L 50 30"/>', 'width="100mm" height="50mm" viewBox="50 20 100 50"'));
+  assert.deepEqual(r.polylines[0].points, [[0, 0], [0, 10]]);
+}
+// 13. unit suffix px/cm on width/height → actionable error; single-quoted attrs work; negative-exponent translate works
+assert.throws(() => parseSvgMotif(wrap('<path d="M 0 0 L 1 1"/>', 'width="100px" height="50px" viewBox="0 0 100 50"')), /re-export in mm/);
+{
+  const r = parseSvgMotif(wrap("<g transform='translate(1e-2,0)'><path d='M 0 0 L 1 0'/></g>"));
+  assert.deepEqual(r.polylines[0].points, [[0.01, 0], [1.01, 0]]);
+}
 
-console.log("svgImport: all checks passed ✓");
+console.log("svgImport: all checks passed ✓ (13)");

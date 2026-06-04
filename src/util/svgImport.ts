@@ -4,9 +4,10 @@
 // Pure string parsing — no DOMParser, so it runs in node scripts too.
 import type { Point, Polyline } from "../generators/types";
 
+// Deliberately separate from Artwork: motif is import-side data (may grow source metadata) and is not canvas-sized.
 export type MotifData = { polylines: Polyline[]; widthMm: number; heightMm: number };
 
-const NUM_RE = /-?\.?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g;
+const NUM_RE = /-?\.?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/;
 
 const num = (s: string): number => {
   const v = parseFloat(s);
@@ -14,18 +15,21 @@ const num = (s: string): number => {
   return v;
 };
 
-/** Strip unit suffix. vpype writes mm; px/unitless are taken as viewBox units. */
-const mm = (s: string): number => num(s.replace(/(mm|px|pt|cm|in)\s*$/i, ""));
+const mm = (s: string): number => {
+  const unit = s.match(/(px|pt|cm|in)\s*$/i);
+  if (unit) throw new Error(`SVG width/height in "${unit[1]}" — re-export in mm (vpype writes mm)`);
+  return num(s.replace(/mm\s*$/i, ""));
+};
 
 const attr = (tag: string, name: string): string | undefined => {
-  const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`));
-  return m?.[1];
+  const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`));
+  return m ? (m[1] ?? m[2]) : undefined;
 };
 
 /** Only translate(x[,y]) is supported (vpype layer groups). Anything else → error. */
 const parseTranslate = (t: string | undefined): [number, number] => {
   if (!t) return [0, 0];
-  const m = t.trim().match(/^translate\(\s*(-?[\d.eE+]+)[\s,]*(-?[\d.eE+]+)?\s*\)$/);
+  const m = t.trim().match(new RegExp(`^translate\\(\\s*(${NUM_RE.source})[\\s,]*(${NUM_RE.source})?\\s*\\)$`));
   if (!m) throw new Error(`unsupported transform "${t}" — flatten the SVG with vpype first`);
   return [num(m[1]), m[2] !== undefined ? num(m[2]) : 0];
 };
@@ -83,7 +87,7 @@ function parsePathD(d: string, off: [number, number]): Polyline[] {
 }
 
 function parsePoints(raw: string, off: [number, number], closed: boolean): Polyline | null {
-  const nums = (raw.match(NUM_RE) ?? []).map(num);
+  const nums = (raw.match(new RegExp(NUM_RE.source, "g")) ?? []).map(num);
   const pts: Point[] = [];
   for (let i = 0; i + 1 < nums.length; i += 2) pts.push([nums[i] + off[0], nums[i + 1] + off[1]]);
   return pts.length >= 2 ? { points: pts, closed } : null;
@@ -108,6 +112,7 @@ export function parseSvgMotif(svg: string): MotifData {
 
   const polylines: Polyline[] = [];
   const stack: [number, number][] = [[0, 0]];
+  // assumes attribute values contain no '>' characters (vpype output; fine for flat plotter SVGs)
   const tagRe = /<\/?(svg|g|path|polyline|polygon|line)\b[^>]*?>/g;
   let m: RegExpExecArray | null;
   while ((m = tagRe.exec(svg))) {
