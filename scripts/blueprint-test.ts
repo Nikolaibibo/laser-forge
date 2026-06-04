@@ -63,4 +63,35 @@ useApp.getState().setMotif(null);
   assert.equal(s1, s2);
 }
 
+// 8. vertical overflow: extreme params on 80×80 — text must never overlap the motif slot
+{
+  useApp.getState().setMotif(null);
+  const art = blueprint.generate(
+    { ...P, header: "TIMEPIECE", subtitle: "Manual-Wind Chronograph", meta: "27mm . 17 Jewels", footer: "PLOTTED 2026", titleHeightMm: 20, frameInsetMm: 25 },
+    1,
+    { wMm: 80, hMm: 80 },
+  );
+  // placeholder = last 3 polylines (box + 2 diagonals)
+  const box = art.polylines[art.polylines.length - 3];
+  assert.equal(box.closed, true);
+  const ys = box.points.map((pt) => pt[1]);
+  const boxTop = Math.min(...ys), boxBot = Math.max(...ys);
+  assert.ok(boxBot - boxTop >= 2, `motif slot too small: ${boxBot - boxTop}`);
+  // every text polyline (not frame idx 0, not last 3) stays fully outside the slot's y-range
+  for (let i = 1; i < art.polylines.length - 3; i++) {
+    for (const [, y] of art.polylines[i].points) {
+      assert.ok(y <= boxTop + 1e-6 || y >= boxBot - 1e-6, `text intrudes motif slot at y=${y} (slot ${boxTop}..${boxBot}, polyline ${i})`);
+    }
+  }
+}
+// 9. multi-line title via \n renders in-bounds and deterministically
+{
+  const a = blueprint.generate({ ...P, title: "OMEGA\nCALIBER 321" }, 1, canvas);
+  const b = blueprint.generate({ ...P, title: "OMEGA\nCALIBER 321" }, 1, canvas);
+  assert.deepEqual(a, b);
+  for (const l of a.polylines) for (const [x, y] of l.points) {
+    assert.ok(x >= 0 && x <= 148 && y >= 0 && y <= 210);
+  }
+}
+
 console.log("blueprint: all checks passed ✓");

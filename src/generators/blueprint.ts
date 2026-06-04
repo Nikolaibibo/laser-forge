@@ -48,6 +48,9 @@ const LETTER_SPACING = 2; // font units — matches the text generator's feel
 const LINE_SPACING = 1.3;
 const CAP_UNITS = 21; // Hershey glyph extent (cap −12 … baseline 9)
 
+/** Minimum fraction of inner height reserved for the motif slot. */
+const MIN_SLOT_FRAC = 0.2;
+
 type Block = { lines: Polyline[]; wMm: number; hMm: number };
 
 /**
@@ -132,6 +135,7 @@ export const blueprint: GeneratorDef<Params> = {
     // Corner marks: crop-mark style, outside the frame, aligned with its edges.
     if (p.cornerMarks) {
       const o = 2;
+      // marks live in the inset band: 2mm off the frame, 1–4mm long, never past the canvas edge
       const len = Math.max(1, Math.min(4, p.frameInsetMm - o - 0.5));
       const corners: [number, number, number, number][] = [
         [fx0, fy0, -1, -1],
@@ -153,15 +157,42 @@ export const blueprint: GeneratorDef<Params> = {
     const iy1 = fy1 - pad;
     const cx = (ix0 + ix1) / 2;
     const maxW = ix1 - ix0;
-    const gap = p.metaHeightMm * 0.9;
+
+    // Build all text blocks and gaps at scale s (1 = requested sizes).
+    // Width-clamping inside block() can only make blocks shorter than linear,
+    // so a single pass with the computed s is sufficient to fit the stack.
+    const buildBlocks = (s: number) => {
+      const gap = p.metaHeightMm * 0.9 * s;
+      // gap above title scales with title size (visual weight), unlike the meta-driven inter-slot gap
+      const titleGap = p.titleHeightMm * 0.8 * s;
+      const header   = block(p.header.toUpperCase(), p.metaFont, p.metaHeightMm * s, maxW);
+      const title    = block(p.title.toUpperCase(), p.titleFont, p.titleHeightMm * s, maxW);
+      const subtitle = block(p.subtitle, p.metaFont, p.metaHeightMm * 1.1 * s, maxW);
+      const meta     = block(p.meta, p.metaFont, p.metaHeightMm * s, maxW, accent("meta"));
+      const footer   = block(p.footer, p.metaFont, p.metaHeightMm * 0.8 * s, maxW);
+      return { gap, titleGap, header, title, subtitle, meta, footer };
+    };
+
+    // Compute total vertical text budget at s=1.
+    const b1 = buildBlocks(1);
+    let textTotal = 0;
+    if (b1.header)   textTotal += b1.header.hMm   + b1.gap;
+    if (b1.footer)   textTotal += b1.footer.hMm   + b1.gap;
+    if (b1.meta)     textTotal += b1.meta.hMm     + b1.gap;
+    if (b1.subtitle) textTotal += b1.subtitle.hMm + b1.gap;
+    if (b1.title)    textTotal += b1.title.hMm    + b1.titleGap;
+
+    // Scale down if the text stack would leave less than MIN_SLOT_FRAC for the motif.
+    const innerH = iy1 - iy0;
+    const minSlotMm = MIN_SLOT_FRAC * innerH;
+    let s = 1;
+    if (textTotal > 0 && textTotal > innerH - minSlotMm) {
+      s = (innerH - minSlotMm) / textTotal;
+    }
 
     // Text blocks (null = collapsed slot). Header/title render uppercased —
     // Hershey has no case transform.
-    const header = block(p.header.toUpperCase(), p.metaFont, p.metaHeightMm, maxW);
-    const title = block(p.title.toUpperCase(), p.titleFont, p.titleHeightMm, maxW);
-    const subtitle = block(p.subtitle, p.metaFont, p.metaHeightMm * 1.1, maxW);
-    const meta = block(p.meta, p.metaFont, p.metaHeightMm, maxW, accent("meta"));
-    const footer = block(p.footer, p.metaFont, p.metaHeightMm * 0.8, maxW);
+    const { gap, titleGap, header, title, subtitle, meta, footer } = buildBlocks(s);
 
     // Top-down: header.
     let top = iy0;
@@ -190,11 +221,12 @@ export const blueprint: GeneratorDef<Params> = {
     if (title) {
       bottom -= title.hMm;
       out.push(...translate(title.lines, cx, bottom));
-      bottom -= p.titleHeightMm * 0.8; // breathing room between motif and title
+      bottom -= titleGap; // breathing room between motif and title
     }
 
     // Motif slot: whatever vertical space remains.
-    const slotH = Math.max(5, bottom - top);
+    // Math.max(1, …) is purely numeric safety — after scaling, slot is ≥ minSlotMm whenever any text exists.
+    const slotH = Math.max(1, bottom - top);
     const mw = maxW * p.motifScale;
     const mh = slotH * p.motifScale;
     const mx = ix0 + (maxW - mw) / 2;
