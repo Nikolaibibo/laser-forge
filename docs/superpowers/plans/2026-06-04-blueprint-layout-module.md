@@ -131,7 +131,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - Test: `scripts/svgimport-test.ts` (zuerst!)
 - Create: `src/util/svgImport.ts`
 
-- [ ] **Step 1: Check-Script schreiben (Repo-Konvention statt Test-Runner)**
+- [x] **Step 1: Check-Script schreiben (Repo-Konvention statt Test-Runner)**
 
 `scripts/svgimport-test.ts` anlegen:
 
@@ -199,7 +199,7 @@ assert.throws(() => parseSvgMotif("<html></html>"), /not an SVG/);
 console.log("svgImport: all checks passed ✓");
 ```
 
-- [ ] **Step 2: Check laufen lassen — muss fehlschlagen**
+- [x] **Step 2: Check laufen lassen — muss fehlschlagen**
 
 ```bash
 npx tsx scripts/svgimport-test.ts
@@ -207,7 +207,7 @@ npx tsx scripts/svgimport-test.ts
 
 Expected: FAIL — `Cannot find module '../src/util/svgImport'`.
 
-- [ ] **Step 3: Parser implementieren**
+- [x] **Step 3: Parser implementieren**
 
 `src/util/svgImport.ts` anlegen:
 
@@ -366,7 +366,7 @@ export function parseSvgMotif(svg: string): MotifData {
 }
 ```
 
-- [ ] **Step 4: Checks laufen lassen — müssen passen**
+- [x] **Step 4: Checks laufen lassen — müssen passen**
 
 ```bash
 npx tsx scripts/svgimport-test.ts && npm run typecheck
@@ -374,7 +374,7 @@ npx tsx scripts/svgimport-test.ts && npm run typecheck
 
 Expected: `svgImport: all checks passed ✓` und typecheck exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/util/svgImport.ts scripts/svgimport-test.ts
