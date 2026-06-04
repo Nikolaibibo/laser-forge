@@ -1,10 +1,18 @@
 import { create } from "zustand";
-import type { Artwork } from "../generators/types";
+import type { Artwork, Polyline } from "../generators/types";
 
 export type Layer = {
   uid: string;
   distortionId: string;
   enabled: boolean;
+};
+
+/** Imported SVG motif for the blueprint generator. Not URL-synced; gone on reload. */
+export type Motif = {
+  name: string;
+  polylines: Polyline[];
+  widthMm: number;
+  heightMm: number;
 };
 
 export type AppState = {
@@ -28,6 +36,8 @@ export type AppState = {
   moveLayer: (uid: string, dir: -1 | 1) => void;
   setLayerParams: (uid: string, params: Record<string, unknown>) => void;
   clearLayers: () => void;
+  motif: Motif | null;
+  setMotif: (m: Motif | null) => void;
   hydrate: (state: Partial<AppState>) => void;
   // Plotter state (PlotterPort instance lives in a useRef in PlotterPanel — not stored here)
   plotterConnected: boolean;
@@ -86,6 +96,8 @@ export const useApp = create<AppState>((set) => ({
   setLayerParams: (uid, params) =>
     set((s) => ({ layerParams: { ...s.layerParams, [uid]: params } })),
   clearLayers: () => set({ layers: [], layerParams: {} }),
+  motif: null,
+  setMotif: (m) => set({ motif: m }),
   hydrate: (s) => set(s),
   plotterConnected: false,
   plotterState: "Disconnected",

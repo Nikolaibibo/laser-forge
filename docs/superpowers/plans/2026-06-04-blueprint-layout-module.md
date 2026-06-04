@@ -390,7 +390,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 **Files:**
 - Modify: `src/state/store.ts`
 
-- [ ] **Step 1: Motif-Feld + Setter ergänzen**
+- [x] **Step 1: Motif-Feld + Setter ergänzen**
 
 In `src/state/store.ts`:
 
@@ -426,7 +426,7 @@ In der `create`-Implementierung (vor `hydrate: (s) => set(s)`, Zeile 89) ergänz
   setMotif: (m) => set({ motif: m }),
 ```
 
-- [ ] **Step 2: Typecheck + Commit**
+- [x] **Step 2: Typecheck + Commit**
 
 ```bash
 npm run typecheck
