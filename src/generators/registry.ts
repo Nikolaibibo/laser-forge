@@ -12,6 +12,7 @@ import { truchet } from "./truchet";
 import { pipes } from "./pipes";
 import { loops } from "./loops";
 import { folds } from "./folds";
+import { text } from "./text";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATORS: GeneratorDef<any>[] = [
@@ -28,6 +29,7 @@ export const GENERATORS: GeneratorDef<any>[] = [
   pipes,
   loops,
   folds,
+  text,
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
