@@ -14,11 +14,13 @@ import { loops } from "./loops";
 import { ribbons } from "./ribbons";
 import { folds } from "./folds";
 import { text } from "./text";
+import { blueprint } from "./blueprint";
 
 /** Picker grouping: pen-plotter generators first (current focus), laser-era second. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATOR_GROUPS: { title: string; items: GeneratorDef<any>[] }[] = [
   { title: "Pen Plotter", items: [pipes, ribbons, loops, folds, text] },
+  { title: "Layout", items: [blueprint] },
   {
     title: "Laser",
     items: [

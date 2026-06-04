@@ -447,7 +447,7 @@ Expected: typecheck exit 0.
 - Create: `src/generators/blueprint.ts`
 - Modify: `src/generators/registry.ts`
 
-- [ ] **Step 1: Fixture anlegen**
+- [x] **Step 1: Fixture anlegen**
 
 `scripts/fixtures/motif-gear.svg` (vpype-artiges Test-Motiv — 12-Eck + Raute + Achse):
 
@@ -462,7 +462,7 @@ Expected: typecheck exit 0.
 </svg>
 ```
 
-- [ ] **Step 2: Check-Script schreiben**
+- [x] **Step 2: Check-Script schreiben**
 
 `scripts/blueprint-test.ts` anlegen:
 
@@ -535,7 +535,7 @@ useApp.getState().setMotif(null);
 console.log("blueprint: all checks passed ✓");
 ```
 
-- [ ] **Step 3: Check laufen lassen — muss fehlschlagen**
+- [x] **Step 3: Check laufen lassen — muss fehlschlagen**
 
 ```bash
 npx tsx scripts/blueprint-test.ts
@@ -543,7 +543,7 @@ npx tsx scripts/blueprint-test.ts
 
 Expected: FAIL — `Cannot find module '../src/generators/blueprint'`.
 
-- [ ] **Step 4: Generator implementieren**
+- [x] **Step 4: Generator implementieren**
 
 `src/generators/blueprint.ts` anlegen:
 
@@ -766,7 +766,7 @@ export const blueprint: GeneratorDef<Params> = {
 
 **Hinweis Glyph-Abdeckung:** Hershey-Fonts decken ASCII 32–127 ab. `·`, Umlaute, `–` fallen auf Space zurück (Verhalten von `layoutTextStrokes`). Für Meta-Zeilen `.` oder `-` als Separator verwenden.
 
-- [ ] **Step 5: Registry erweitern**
+- [x] **Step 5: Registry erweitern**
 
 In `src/generators/registry.ts`:
 
@@ -782,7 +782,7 @@ In `GENERATOR_GROUPS` (Zeile 20) eine neue Gruppe zwischen "Pen Plotter" und "La
   { title: "Layout", items: [blueprint] },
 ```
 
-- [ ] **Step 6: Checks laufen lassen — müssen passen**
+- [x] **Step 6: Checks laufen lassen — müssen passen**
 
 ```bash
 npx tsx scripts/blueprint-test.ts && npm run typecheck
@@ -790,7 +790,7 @@ npx tsx scripts/blueprint-test.ts && npm run typecheck
 
 Expected: `blueprint: all checks passed ✓` und typecheck exit 0.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/generators/blueprint.ts src/generators/registry.ts scripts/blueprint-test.ts scripts/fixtures/motif-gear.svg
