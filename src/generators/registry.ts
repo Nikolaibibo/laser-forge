@@ -15,24 +15,29 @@ import { ribbons } from "./ribbons";
 import { folds } from "./folds";
 import { text } from "./text";
 
+/** Picker grouping: pen-plotter generators first (current focus), laser-era second. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const GENERATORS: GeneratorDef<any>[] = [
-  flowField,
-  harmonograph,
-  rose,
-  spirograph,
-  superformula,
-  truchet,
-  attractor,
-  voronoi,
-  lSystem,
-  differentialGrowth,
-  pipes,
-  loops,
-  ribbons,
-  folds,
-  text,
+export const GENERATOR_GROUPS: { title: string; items: GeneratorDef<any>[] }[] = [
+  { title: "Pen Plotter", items: [pipes, ribbons, loops, folds, text] },
+  {
+    title: "Laser",
+    items: [
+      flowField,
+      harmonograph,
+      rose,
+      spirograph,
+      superformula,
+      truchet,
+      attractor,
+      voronoi,
+      lSystem,
+      differentialGrowth,
+    ],
+  },
 ];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const GENERATORS: GeneratorDef<any>[] = GENERATOR_GROUPS.flatMap((g) => g.items);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const byId = (id: string): GeneratorDef<any> | undefined =>
