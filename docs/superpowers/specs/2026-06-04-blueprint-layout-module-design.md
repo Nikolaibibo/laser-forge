@@ -96,8 +96,8 @@ Vertikaler, zentrierter Stack innerhalb des Rahmens:
 ## SVG-Import (`src/util/svgImport.ts`)
 
 - **Input:** SVG-String (File-Upload via `MotifPanel`).
-- **Unterstützt:** `<path>` mit ausschließlich M/L/m/l/Z-Kommandos, `<polyline>`, `<polygon>`, `<line>`. `viewBox` + `width`/`height` (mm-Einheiten, vpype-Standard) für die Maß-Ableitung.
-- **Nicht unterstützt (harter Fehler mit klarer Meldung):** C/Q/A-Kurvenkommandos, `transform`-Attribute, `<use>`, Text-Elemente. Meldung verweist auf vpype-Aufbereitung.
+- **Unterstützt:** `<path>` mit ausschließlich M/L/m/l/Z-Kommandos, `<polyline>`, `<polygon>`, `<line>`. `viewBox` + `width`/`height` (mm-Einheiten, vpype-Standard) für die Maß-Ableitung. `transform="translate(x,y)"` auf Gruppen/Elementen (vpype-Layer-Groups).
+- **Nicht unterstützt (harter Fehler mit klarer Meldung):** C/Q/A-Kurvenkommandos, `transform` außer reinem `translate` (rotate/scale/matrix), `<use>`, Text-Elemente. Meldung verweist auf vpype-Aufbereitung.
 - **Output:** `{ polylines: Polyline[], widthMm, heightMm }`. Farben/Layer des Quell-SVGs werden ignoriert — Motiv rendert im Default-Pen (Akzentfarbe steuert nur Rahmen/Meta).
 
 ## Datenfluss
