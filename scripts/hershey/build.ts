@@ -22,11 +22,12 @@ for (const font of FONTS) {
   // JHF logical records: cols 0-4 glyph id, cols 5-7 vertex count (incl. the
   // left/right pair = 2 chars per vertex). Long glyphs wrap across physical
   // lines — join until the declared data length is reached.
-  const physical = jhf.split("\n").filter((l) => l.length > 0);
+  const physical = jhf.split("\n").map((l) => l.replace(/\r$/, "")).filter((l) => l.length > 0);
   const lines: string[] = [];
   for (let i = 0; i < physical.length; ) {
     let line = physical[i++];
     const nverts = parseInt(line.slice(5, 8), 10);
+    if (isNaN(nverts)) throw new Error(`${font.jhf}: malformed glyph header at record ${lines.length + 1}`);
     while (line.length - 8 < nverts * 2 && i < physical.length) line += physical[i++];
     lines.push(line);
   }

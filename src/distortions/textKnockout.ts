@@ -1,6 +1,6 @@
 // src/distortions/textKnockout.ts — carve text as negative space into any artwork.
 import type { DistortionDef, Point } from "../generators/types";
-import { layoutTextStrokes } from "../generators/text";
+import { layoutTextStrokes, FONT_IDS } from "../generators/text";
 import type { HersheyFontId } from "../generators/text";
 import { occlude } from "../util/occlusion";
 import type { OcclItem } from "../util/occlusion";
@@ -41,7 +41,7 @@ export const textKnockout: DistortionDef<Params> = {
   defaults: DEFAULTS,
   schema: {
     text: { value: DEFAULTS.text },
-    font: { value: DEFAULTS.font, options: ["simplex", "cursive"] },
+    font: { value: DEFAULTS.font, options: FONT_IDS },
     sizeMm: { value: DEFAULTS.sizeMm, min: 5, max: 150, step: 1 },
     xFrac: { value: DEFAULTS.xFrac, min: 0, max: 1, step: 0.01 },
     yFrac: { value: DEFAULTS.yFrac, min: 0, max: 1, step: 0.01 },

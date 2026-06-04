@@ -20,7 +20,7 @@
 - Create (generiert): `src/generators/hersheyTimesr.ts`, `src/generators/hersheyTimesrb.ts`, `src/generators/hersheyTimesi.ts`
 - Modify: `src/generators/text.ts` (Font-Registry + Schema-Options)
 
-- [ ] **Step 1: JHF-Dateien herunterladen**
+- [x] **Step 1: JHF-Dateien herunterladen**
 
 ```bash
 cd /Users/nikolaibockholt/Documents/web/laser-forge/scripts/hershey
@@ -32,7 +32,7 @@ wc -l *.jhf
 
 Expected: drei neue Dateien, je ≥96 Zeilen (physische Zeilen können >96 sein — JHF wrappt lange Glyphen, siehe Step 2). Fallback bei 404: `https://media.unpythonic.net/emergent-files/software/hershey/hershey.zip` entpacken und die drei `.jhf` herauskopieren.
 
-- [ ] **Step 2: build.ts um Continuation-Line-Joining + neue Fonts erweitern**
+- [x] **Step 2: build.ts um Continuation-Line-Joining + neue Fonts erweitern**
 
 JHF-Format: Spalten 0–4 Glyph-ID, Spalten 5–7 Vertex-Count (inkl. Left/Right-Paar), Daten ab Spalte 8. Lange Glyphen wrappen über mehrere physische Zeilen — `futural.jhf`/`cursive.jhf` sind ungewrappt, die Times-Schnitte potenziell nicht. In `scripts/hershey/build.ts`:
 
@@ -64,7 +64,7 @@ Die Zeile `const lines = jhf.split("\n").filter((l) => l.trim().length > 0);` (Z
   }
 ```
 
-- [ ] **Step 3: Build laufen lassen**
+- [x] **Step 3: Build laufen lassen**
 
 ```bash
 cd /Users/nikolaibockholt/Documents/web/laser-forge
@@ -73,7 +73,7 @@ npx tsx scripts/hershey/build.ts
 
 Expected: 5 Zeilen `wrote .../src/generators/hershey*.ts (96 glyphs)`. **Wenn eine Font ≠96 Glyphen meldet, STOPP** — Wrapping-Logik prüfen (Daten-Länge je Zeile gegen `nverts*2` diffen), nicht einfach weitermachen.
 
-- [ ] **Step 4: Font-Registry in text.ts erweitern**
+- [x] **Step 4: Font-Registry in text.ts erweitern**
 
 In `src/generators/text.ts`:
 
@@ -105,7 +105,7 @@ Im Schema des Text-Generators (Zeile 162) die Font-Options erweitern:
     font: { value: DEFAULTS.font, options: FONT_IDS },
 ```
 
-- [ ] **Step 5: Typecheck + Sicht-Render**
+- [x] **Step 5: Typecheck + Sicht-Render**
 
 ```bash
 npm run typecheck
@@ -114,7 +114,7 @@ npx tsx scripts/render-demo.ts text 7 /tmp/serif-check.svg font=serif text=CALIB
 
 Expected: typecheck exit 0; Render-Zeile `text seed=7 → /tmp/serif-check.svg (N polylines, M bytes)` mit N > 0. Optional PNG: `rsvg-convert -w 600 /tmp/serif-check.svg -o /tmp/serif-check.png` und anschauen — Serif-Buchstabenformen erkennbar.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/hershey/ src/generators/hersheyTimesr.ts src/generators/hersheyTimesrb.ts src/generators/hersheyTimesi.ts src/generators/text.ts
