@@ -1,7 +1,7 @@
 // src/generators/text.ts
 import type { GeneratorDef, Point, Polyline } from "./types";
 import { FUTURAL } from "./hersheyFutural";
-import { offsetPath, symmetricOffsets } from "../util/offset";
+import { offsetBand } from "../util/offset";
 import { fitToCanvas } from "../util/path";
 
 type Params = {
@@ -12,13 +12,14 @@ type Params = {
   lineSpacing: number;    // line height multiplier
   joinStrokes: boolean;   // chain all strokes into one continuous flowing ribbon
   cornerSmooth: number;   // Chaikin iterations on the centerline (rounds miters)
+  endCaps: boolean;       // close band ends with nested semicircular caps
   marginMm: number;
 };
 
 const DEFAULTS: Params = {
   text: "FLOW",
   lanes: 6, laneSpacingMm: 0.9, letterSpacing: 2, lineSpacing: 1.5,
-  joinStrokes: false, cornerSmooth: 2, marginMm: 20,
+  joinStrokes: false, cornerSmooth: 2, endCaps: true, marginMm: 20,
 };
 
 /** Hershey line height in font units (cap −12 … baseline 9, plus leading). */
@@ -75,6 +76,7 @@ export const text: GeneratorDef<Params> = {
     lineSpacing: { value: DEFAULTS.lineSpacing, min: 0.8, max: 3, step: 0.1 },
     joinStrokes: { value: DEFAULTS.joinStrokes },
     cornerSmooth: { value: DEFAULTS.cornerSmooth, min: 0, max: 4, step: 1 },
+    endCaps: { value: DEFAULTS.endCaps },
     marginMm: { value: DEFAULTS.marginMm, min: 0, max: 50, step: 1 },
   },
   generate: (p, _seed, canvas) => {
@@ -99,12 +101,15 @@ export const text: GeneratorDef<Params> = {
 
     const centerlines: Point[][] = p.joinStrokes ? [chainStrokes(allStrokes)] : allStrokes;
 
-    const offsets = symmetricOffsets(p.lanes, p.laneSpacingMm);
     const bands: Polyline[] = [];
     for (let center of centerlines) {
       if (center.length < 2) continue;
       for (let i = 0; i < p.cornerSmooth; i++) center = chaikinPass(center);
-      bands.push(...offsetPath(center, offsets, { minInnerRadiusMm: p.laneSpacingMm }));
+      bands.push(...offsetBand(center, Math.max(2, Math.floor(p.lanes)), p.laneSpacingMm, {
+        minInnerRadiusMm: p.laneSpacingMm,
+        endCaps: p.endCaps,
+        capSamples: 10,
+      }));
     }
 
     const fitted = fitToCanvas(bands, canvas.wMm, canvas.hMm, p.marginMm);

@@ -18,6 +18,71 @@ export const symmetricOffsets = (k: number, spacing: number): number[] =>
  * Reine Geometrie, kein RNG. Miter-Skalierung hält den parallelen Abstand in Kurven;
  * `miterLimit` deckelt sie an scharfen Ecken (verhindert Spikes).
  */
+export type BandOpts = OffsetOpts & {
+  /** Treat the centerline as closed (no ends → no caps). */
+  closed?: boolean;
+  /** Close band ends with nested semicircular caps, fusing symmetric lane pairs into rings. */
+  endCaps?: boolean;
+  /** Samples per cap semicircle. Default 12. */
+  capSamples?: number;
+};
+
+/** Semicircular cap around a band end: C + (n̂·cosθ + t̂·sinθ)·r, θ ∈ (0, π) exclusive. */
+function capArc(c: Point, nHat: Point, tHat: Point, r: number, samples: number): Point[] {
+  const pts: Point[] = [];
+  for (let i = 1; i < samples; i++) {
+    const th = (Math.PI * i) / samples;
+    const cos = Math.cos(th), sin = Math.sin(th);
+    pts.push([c[0] + (nHat[0] * cos + tHat[0] * sin) * r, c[1] + (nHat[1] * cos + tHat[1] * sin) * r]);
+  }
+  return pts;
+}
+
+/**
+ * Offset band of `k` symmetric lanes around a centerline. With `endCaps` (and an
+ * open centerline) symmetric lane pairs (+o/−o) are fused into geometrically closed
+ * rings: lane → nested semicircular end cap → opposite lane reversed → start cap.
+ * Rings repeat their first point and stay `closed: false`, so densify-and-cut
+ * consumers (occlusion) keep working unchanged. Odd k leaves the middle lane open.
+ * Pure geometry, no RNG.
+ */
+export function offsetBand(center: Point[], k: number, spacingMm: number, opts: BandOpts = {}): Polyline[] {
+  const offsets = symmetricOffsets(k, spacingMm);
+  const lanes = offsetPath(center, offsets, opts);
+  const n = center.length;
+  if (!opts.endCaps || opts.closed || n < 2) return lanes;
+
+  const capSamples = opts.capSamples ?? 12;
+  const unit = (vx: number, vy: number): Point => {
+    const l = Math.hypot(vx, vy) || 1;
+    return [vx / l, vy / l];
+  };
+  // Outward tangents + normals at both ends (normal = tangent rotated +90°, matches offsetPath).
+  const tEnd = unit(center[n - 1][0] - center[n - 2][0], center[n - 1][1] - center[n - 2][1]);
+  const nEnd: Point = [-tEnd[1], tEnd[0]];
+  const tStart = unit(center[0][0] - center[1][0], center[0][1] - center[1][1]);
+  const nStart: Point = [-tStart[1], tStart[0]]; // points toward −offset side (tStart is reversed)
+
+  const out: Polyline[] = [];
+  for (let i = 0; i < Math.floor(k / 2); i++) {
+    const lo = lanes[i];          // offset −o side (offsets ascend)
+    const hi = lanes[k - 1 - i];  // offset +o side
+    const r = Math.abs(offsets[k - 1 - i]);
+    // hi forward → end cap (+n̂→−n̂ around tip) → lo backward → start cap → close.
+    const ring: Point[] = [
+      ...hi.points,
+      ...capArc(center[n - 1], nEnd, tEnd, r, capSamples),
+      ...[...lo.points].reverse(),
+      // at the start, n̂Start = −n̂End side: lo's start sits at +n̂Start·r
+      ...capArc(center[0], nStart, tStart, r, capSamples),
+    ];
+    ring.push([ring[0][0], ring[0][1]]);
+    out.push({ closed: false, points: ring });
+  }
+  if (k % 2 === 1) out.push(lanes[Math.floor(k / 2)]);
+  return out;
+}
+
 export function offsetPath(center: Point[], offsets: number[], opts: OffsetOpts = {}): Polyline[] {
   const miterLimit = opts.miterLimit ?? 4;
   const n = center.length;

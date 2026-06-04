@@ -11,6 +11,7 @@ import { spirograph } from "./spirograph";
 import { truchet } from "./truchet";
 import { pipes } from "./pipes";
 import { loops } from "./loops";
+import { ribbons } from "./ribbons";
 import { folds } from "./folds";
 import { text } from "./text";
 
@@ -28,6 +29,7 @@ export const GENERATORS: GeneratorDef<any>[] = [
   differentialGrowth,
   pipes,
   loops,
+  ribbons,
   folds,
   text,
 ];

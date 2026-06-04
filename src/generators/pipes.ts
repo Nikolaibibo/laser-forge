@@ -1,9 +1,9 @@
 // src/generators/pipes.ts
 import type { GeneratorDef, Point, Polyline } from "./types";
-import { makeRng } from "../util/random";
+import { makeRng, randInt } from "../util/random";
 import type { RNG } from "../util/random";
 import { fitToCanvas, polylineLength } from "../util/path";
-import { offsetPath, symmetricOffsets } from "../util/offset";
+import { offsetBand } from "../util/offset";
 import { mergePaths } from "../util/mergePaths";
 import { occlude } from "../util/occlusion";
 import type { OcclItem } from "../util/occlusion";
@@ -12,8 +12,10 @@ type Params = {
   model: "classic" | "wang";
   cols: number;
   rows: number;
-  lanes: number;
+  lanesMin: number;       // band width per pipe is seeded from [lanesMin, lanesMax]
+  lanesMax: number;
   laneSpacingMm: number;
+  endCaps: boolean;       // close band ends with nested semicircular caps
   straightness: number;   // classic = P(cross tile); wang = P(straight pass-through at a turn)
   density: number;        // 0..1 edge-open probability (wang model)
   crossing: number;       // 0..1 P(both pipes pass through when N+W meet) — wang model
@@ -30,7 +32,7 @@ type Params = {
 
 const DEFAULTS: Params = {
   model: "wang",
-  cols: 14, rows: 18, lanes: 6, laneSpacingMm: 0.7,
+  cols: 14, rows: 18, lanesMin: 6, lanesMax: 6, laneSpacingMm: 0.7, endCaps: true,
   straightness: 0.55, density: 0.5, crossing: 0.45, colorFraction: 0.35,
   colorStrategy: "largestFirst",
   colorCount: 3,
@@ -169,14 +171,16 @@ export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",
   description:
-    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors); the accent palette itself is colorCount + color1…color6. crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Reseed reshuffles field + z-order.",
+    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors); the accent palette itself is colorCount + color1…color6. crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Band width per pipe is seeded from [lanesMin, lanesMax]; endCaps closes band ends with nested semicircular caps. Reseed reshuffles field + z-order.",
   defaults: DEFAULTS,
   schema: {
     model: { value: DEFAULTS.model, options: ["wang", "classic"] },
     cols: { value: DEFAULTS.cols, min: 3, max: 40, step: 1 },
     rows: { value: DEFAULTS.rows, min: 3, max: 40, step: 1 },
-    lanes: { value: DEFAULTS.lanes, min: 2, max: 16, step: 1 },
+    lanesMin: { value: DEFAULTS.lanesMin, min: 2, max: 16, step: 1 },
+    lanesMax: { value: DEFAULTS.lanesMax, min: 2, max: 16, step: 1 },
     laneSpacingMm: { value: DEFAULTS.laneSpacingMm, min: 0.3, max: 3, step: 0.1 },
+    endCaps: { value: DEFAULTS.endCaps },
     straightness: { value: DEFAULTS.straightness, min: 0, max: 1, step: 0.05 },
     density: { value: DEFAULTS.density, min: 0.05, max: 1, step: 0.05 },
     crossing: { value: DEFAULTS.crossing, min: 0, max: 1, step: 0.05 },
@@ -200,8 +204,11 @@ export const pipes: GeneratorDef<Params> = {
     const rng = makeRng(seed);
     const cols = Math.max(2, Math.floor(p.cols));
     const rows = Math.max(2, Math.floor(p.rows));
-    const bandHalf = ((p.lanes - 1) * p.laneSpacingMm) / 2;
-    const c = Math.max(10, (bandHalf + 2 * p.laneSpacingMm) * 2);
+    const lanesLo = Math.max(2, Math.floor(Math.min(p.lanesMin, p.lanesMax)));
+    const lanesHi = Math.max(2, Math.floor(Math.max(p.lanesMin, p.lanesMax)));
+    // Cell size fits the widest possible band.
+    const bandHalfMax = ((lanesHi - 1) * p.laneSpacingMm) / 2;
+    const c = Math.max(10, (bandHalfMax + 2 * p.laneSpacingMm) * 2);
 
     const strokes = p.model === "wang"
       ? wangField(cols, rows, c, p.arcSamples, p.straightness, p.density, rng, p.crossing)
@@ -213,14 +220,19 @@ export const pipes: GeneratorDef<Params> = {
     const palette = [p.color1, p.color2, p.color3, p.color4, p.color5, p.color6]
       .slice(0, Math.min(6, Math.max(1, Math.round(p.colorCount))));
 
-    const offsets = symmetricOffsets(p.lanes, p.laneSpacingMm);
-
     // One entry per pipe: centerline + offset band, length for colorStrategy.
-    type Comp = { center: Point[]; lanes: Polyline[]; lengthMm: number; stroke?: string };
+    // Lane count per pipe is seeded from [lanesMin, lanesMax] (variable band width).
+    type Comp = { center: Point[]; lanes: Polyline[]; lengthMm: number; bandHalfMm: number; stroke?: string };
     const comps: Comp[] = components.map((comp) => {
+      const k = lanesLo === lanesHi ? lanesLo : randInt(rng, lanesLo, lanesHi);
       const center = comp.closed ? [...comp.points, comp.points[0]] : comp.points;
-      const lanes = offsetPath(center, offsets, { minInnerRadiusMm: p.laneSpacingMm });
-      return { center, lanes, lengthMm: polylineLength(center) };
+      const lanes = offsetBand(center, k, p.laneSpacingMm, {
+        minInnerRadiusMm: p.laneSpacingMm,
+        closed: comp.closed,
+        endCaps: p.endCaps,
+        capSamples: p.arcSamples,
+      });
+      return { center, lanes, lengthMm: polylineLength(center), bandHalfMm: ((k - 1) * p.laneSpacingMm) / 2 };
     });
 
     if (p.colorStrategy === "largestFirst") {
@@ -246,8 +258,9 @@ export const pipes: GeneratorDef<Params> = {
         z: rng(),
         centerline: c.center,
         lanes: c.lanes.map((l) => laneOf(c, l)),
+        bandHalfMm: c.bandHalfMm,
       }));
-      all = occlude(items, { gapMm: p.occlusionGapMm, bandHalfMm: bandHalf });
+      all = occlude(items, { gapMm: p.occlusionGapMm, bandHalfMm: bandHalfMax });
     } else {
       all = comps.flatMap((c) => c.lanes.map((l) => laneOf(c, l)));
     }

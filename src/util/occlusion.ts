@@ -7,6 +7,8 @@ export type OcclItem = {
   z: number;
   centerline: Point[];
   lanes: Polyline[];
+  /** Per-item half band width (mm) — overrides opts.bandHalfMm (variable-width bands). */
+  bandHalfMm?: number;
 };
 
 export type OccludeOpts = {
@@ -55,7 +57,7 @@ function densify(pts: Point[], step: number): Point[] {
   return out;
 }
 
-type GridSeg = { a: Point; b: Point; z: number };
+type GridSeg = { a: Point; b: Point; z: number; clear2: number };
 
 /**
  * Z-order occlusion for bands of offset lanes. Each lane of a pipe is split into the
@@ -66,17 +68,19 @@ type GridSeg = { a: Point; b: Point; z: number };
  * Spatial hash over all centerline segments → near-linear in total lane vertices.
  */
 export function occlude(items: OcclItem[], opts: OccludeOpts): Polyline[] {
-  const clear = opts.bandHalfMm + opts.gapMm;
-  const clear2 = clear * clear;
+  // Carve radius per item: the COVERING band's half width + gap (variable-width support).
+  const clearOf = (it: OcclItem) => (it.bandHalfMm ?? opts.bandHalfMm) + opts.gapMm;
+  const maxClear = items.reduce((m, it) => Math.max(m, clearOf(it)), opts.bandHalfMm + opts.gapMm);
   const step = opts.stepMm ?? Math.max(0.4, opts.gapMm * 0.5);
   const simpTol = opts.simplifyTolMm ?? 0.01;
-  const cell = Math.max(clear, 1);
+  const cell = Math.max(maxClear, 1);
 
   // Build a uniform-grid index of every centerline segment (tagged with its pipe's z).
   const grid = new Map<string, GridSeg[]>();
   const key = (gx: number, gy: number) => `${gx},${gy}`;
   for (const it of items) {
     const c = it.centerline;
+    const clr = clearOf(it);
     for (let i = 0; i < c.length - 1; i++) {
       const a = c[i];
       const b = c[i + 1];
@@ -84,7 +88,7 @@ export function occlude(items: OcclItem[], opts: OccludeOpts): Polyline[] {
       const x1 = Math.floor(Math.max(a[0], b[0]) / cell);
       const y0 = Math.floor(Math.min(a[1], b[1]) / cell);
       const y1 = Math.floor(Math.max(a[1], b[1]) / cell);
-      const seg: GridSeg = { a, b, z: it.z };
+      const seg: GridSeg = { a, b, z: it.z, clear2: clr * clr };
       for (let gx = x0; gx <= x1; gx++) {
         for (let gy = y0; gy <= y1; gy++) {
           const k = key(gx, gy);
@@ -105,7 +109,7 @@ export function occlude(items: OcclItem[], opts: OccludeOpts): Polyline[] {
         if (!arr) continue;
         for (const s of arr) {
           if (s.z <= zSelf) continue;
-          if (distSqToSeg(p, s.a, s.b) < clear2) return true;
+          if (distSqToSeg(p, s.a, s.b) < s.clear2) return true;
         }
       }
     }

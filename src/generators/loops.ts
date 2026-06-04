@@ -2,7 +2,7 @@
 import type { GeneratorDef, Point, Polyline } from "./types";
 import { makeRng, randInt, randRange, pick } from "../util/random";
 import { fitToCanvas } from "../util/path";
-import { offsetPath, symmetricOffsets } from "../util/offset";
+import { offsetBand } from "../util/offset";
 
 /**
  * Boustrophedon centerline: `runs` parallel straight runs of length `runLengthMm`,
@@ -74,6 +74,7 @@ type Params = {
   runSpacingMm: number;
   lanes: number;
   laneSpacingMm: number;
+  endCaps: boolean;
   numColors: number;
   capSamples: number;
   marginMm: number;
@@ -82,7 +83,7 @@ type Params = {
 const DEFAULTS: Params = {
   gridCols: 3, gridRows: 4, cellJitter: 0.35, angleJitterDeg: 8,
   runsMin: 2, runsMax: 5, runLenMinMm: 60, runLenMaxMm: 150,
-  runSpacingMm: 9, lanes: 14, laneSpacingMm: 0.5, numColors: 2, capSamples: 16, marginMm: 15,
+  runSpacingMm: 9, lanes: 14, laneSpacingMm: 0.5, endCaps: true, numColors: 2, capSamples: 16, marginMm: 15,
 };
 
 export const loops: GeneratorDef<Params> = {
@@ -103,13 +104,14 @@ export const loops: GeneratorDef<Params> = {
     runSpacingMm: { value: DEFAULTS.runSpacingMm, min: 2, max: 30, step: 0.5 },
     lanes: { value: DEFAULTS.lanes, min: 2, max: 30, step: 1 },
     laneSpacingMm: { value: DEFAULTS.laneSpacingMm, min: 0.2, max: 3, step: 0.1 },
+    endCaps: { value: DEFAULTS.endCaps },
     numColors: { value: DEFAULTS.numColors, min: 1, max: 3, step: 1 },
     capSamples: { value: DEFAULTS.capSamples, min: 4, max: 32, step: 1 },
     marginMm: { value: DEFAULTS.marginMm, min: 0, max: 40, step: 1 },
   },
   generate: (p, seed, canvas) => {
     const rng = makeRng(seed);
-    const offsets = symmetricOffsets(p.lanes, p.laneSpacingMm);
+    const lanesK = Math.max(2, Math.floor(p.lanes));
     const runsLo = Math.min(p.runsMin, p.runsMax);
     const runsHi = Math.max(p.runsMin, p.runsMax);
     const lenLo = Math.min(p.runLenMinMm, p.runLenMaxMm);
@@ -136,7 +138,12 @@ export const loops: GeneratorDef<Params> = {
         // rotate about the shape's own bbox center, then move that center onto (tx,ty)
         const placed = rotateTranslate(center, angle, bx, by, tx - bx, ty - by);
         const stroke = PALETTE[i % numColors];
-        for (const lane of offsetPath(placed, offsets, { minInnerRadiusMm: p.laneSpacingMm })) {
+        const band = offsetBand(placed, lanesK, p.laneSpacingMm, {
+          minInnerRadiusMm: p.laneSpacingMm,
+          endCaps: p.endCaps,
+          capSamples: p.capSamples,
+        });
+        for (const lane of band) {
           all.push({ ...lane, stroke });
         }
         i++;
