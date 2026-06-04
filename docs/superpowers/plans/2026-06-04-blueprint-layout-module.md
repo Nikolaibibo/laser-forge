@@ -948,7 +948,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 **Files:**
 - Modify: `scripts/render-demo.ts`
 
-- [ ] **Step 1: motif= und canvas= Overrides einbauen**
+- [x] **Step 1: motif= und canvas= Overrides einbauen**
 
 In `scripts/render-demo.ts`:
 
@@ -992,7 +992,7 @@ Und Zeile 31 ersetzen durch:
 const art = gen.generate(params, seed, { wMm: canvasW, hMm: canvasH });
 ```
 
-- [ ] **Step 2: End-to-End-Render (A5, volle Caliber-Befüllung)**
+- [x] **Step 2: End-to-End-Render (A5, volle Caliber-Befüllung)**
 
 ```bash
 npx tsx scripts/render-demo.ts blueprint 1 /tmp/blueprint-a5.svg canvas=148x210 \
@@ -1007,7 +1007,7 @@ rsvg-convert -w 740 /tmp/blueprint-a5.svg -o /tmp/blueprint-a5.png
 
 Expected: SVG mit >0 polylines; PNG zeigt: Rahmen + Druckmarken, TIMEPIECE oben, Gear-Motiv mittig, OMEGA CALIBER 321 (Serif, groß), Untertitel, Meta-Zeile, Footer unten — alles zentriert, nichts überlappt, nichts außerhalb des Rahmens.
 
-- [ ] **Step 3: Determinismus + Formate**
+- [x] **Step 3: Determinismus + Formate**
 
 ```bash
 npx tsx scripts/render-demo.ts blueprint 1 /tmp/bp-d1.svg canvas=148x210 motif=scripts/fixtures/motif-gear.svg
@@ -1021,7 +1021,7 @@ rsvg-convert -w 740 /tmp/bp-a4.svg -o /tmp/bp-a4.png
 
 Expected: `DETERMINISTIC ✓`; 80×80- und A4-Renders proportional sauber (Titel skaliert ggf. auf Rahmenbreite runter).
 
-- [ ] **Step 4: Bestands-Regression**
+- [x] **Step 4: Bestands-Regression**
 
 ```bash
 npx tsx scripts/svgimport-test.ts && npx tsx scripts/blueprint-test.ts && npm run typecheck
@@ -1030,7 +1030,7 @@ npx tsx scripts/render-demo.ts pipes 7 /tmp/pipes-regression.svg
 
 Expected: alle Checks ✓, pipes rendert unverändert (bestehende Generators unangetastet).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/render-demo.ts

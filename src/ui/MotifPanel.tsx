@@ -33,7 +33,7 @@ export function MotifPanel() {
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
-    });
+    }).catch((e) => setError(e instanceof Error ? e.message : String(e)));
   };
 
   return (
