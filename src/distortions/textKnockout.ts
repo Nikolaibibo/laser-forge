@@ -13,6 +13,7 @@ type Params = {
   xFrac: number;         // anchor (text center) as fraction of canvas width
   yFrac: number;         // anchor as fraction of canvas height
   clearMm: number;       // carve radius around the text centerline
+  rotationDeg: number;   // rotates the text block around its anchor (90 = vertical)
   letterSpacing: number; // extra tracking (font units)
   lineSpacing: number;   // line height multiplier
 };
@@ -24,6 +25,7 @@ const DEFAULTS: Params = {
   xFrac: 0.5,
   yFrac: 0.5,
   clearMm: 6,
+  rotationDeg: 0,
   letterSpacing: 2,
   lineSpacing: 1.5,
 };
@@ -44,6 +46,7 @@ export const textKnockout: DistortionDef<Params> = {
     xFrac: { value: DEFAULTS.xFrac, min: 0, max: 1, step: 0.01 },
     yFrac: { value: DEFAULTS.yFrac, min: 0, max: 1, step: 0.01 },
     clearMm: { value: DEFAULTS.clearMm, min: 0.5, max: 20, step: 0.5 },
+    rotationDeg: { value: DEFAULTS.rotationDeg, min: -180, max: 180, step: 5 },
     letterSpacing: { value: DEFAULTS.letterSpacing, min: -4, max: 12, step: 0.5 },
     lineSpacing: { value: DEFAULTS.lineSpacing, min: 0.8, max: 3, step: 0.1 },
   },
@@ -59,11 +62,26 @@ export const textKnockout: DistortionDef<Params> = {
         if (x > maxX) maxX = x; if (y > maxY) maxY = y;
       }
     }
-    // Clamp so the text never exceeds 90% of the canvas width (sizeMm is the cap target).
-    const scale = Math.min(p.sizeMm / CAP_H, (0.9 * artwork.widthMm) / Math.max(1, maxX - minX));
+    // Clamp so the text never exceeds 90% of the canvas extent along its baseline
+    // (after rotation the baseline may run vertically — clamp against that axis).
+    const th = (p.rotationDeg * Math.PI) / 180;
+    const cos = Math.cos(th), sin = Math.sin(th);
+    const textW = Math.max(1, maxX - minX);
+    const textH = Math.max(1, maxY - minY);
+    const rotW = Math.abs(textW * cos) + Math.abs(textH * sin);
+    const rotH = Math.abs(textW * sin) + Math.abs(textH * cos);
+    const scale = Math.min(
+      p.sizeMm / CAP_H,
+      (0.9 * artwork.widthMm) / rotW,
+      (0.9 * artwork.heightMm) / rotH,
+    );
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
     const ax = p.xFrac * artwork.widthMm, ay = p.yFrac * artwork.heightMm;
-    const place = ([x, y]: Point): Point => [(x - cx) * scale + ax, (y - cy) * scale + ay];
+    const place = ([x, y]: Point): Point => {
+      const rx = (x - cx) * cos - (y - cy) * sin;
+      const ry = (x - cx) * sin + (y - cy) * cos;
+      return [rx * scale + ax, ry * scale + ay];
+    };
 
     // Text strokes carve (z=1) but draw nothing (empty lanes); the artwork is one
     // z=0 item whose lanes get cut. Zero new geometry — occlude does the work.

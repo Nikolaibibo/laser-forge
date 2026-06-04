@@ -130,6 +130,7 @@ type Params = {
   occlusionGap: number;   // clear gap (font units) letters carve into connectors (joinStrokes)
   cornerSmooth: number;   // Chaikin iterations on the centerline (rounds miters)
   endCaps: boolean;       // close band ends with nested semicircular caps
+  rotationDeg: number;    // rotates the whole text block (90 = vertical for portrait)
   colorBy: "none" | "letter" | "word" | "line";
   colorCount: number;     // 1..6 — how many of the color slots below form the palette
   color1: string; color2: string; color3: string;
@@ -142,6 +143,7 @@ const DEFAULTS: Params = {
   font: "simplex",
   lanesMin: 6, lanesMax: 6, laneSpacingMm: 0.9, letterSpacing: 2, lineSpacing: 1.5,
   joinStrokes: false, occlusionGap: 1.5, cornerSmooth: 2, endCaps: true,
+  rotationDeg: 0,
   colorBy: "letter",
   colorCount: 3,
   color1: "#e0584f", color2: "#4f86e0", color3: "#5fcaa8",
@@ -167,6 +169,7 @@ export const text: GeneratorDef<Params> = {
     occlusionGap: { value: DEFAULTS.occlusionGap, min: 0, max: 6, step: 0.1 },
     cornerSmooth: { value: DEFAULTS.cornerSmooth, min: 0, max: 4, step: 1 },
     endCaps: { value: DEFAULTS.endCaps },
+    rotationDeg: { value: DEFAULTS.rotationDeg, min: -180, max: 180, step: 5 },
     colorBy: { value: DEFAULTS.colorBy, options: ["none", "letter", "word", "line"] },
     colorCount: { value: DEFAULTS.colorCount, min: 1, max: 6, step: 1 },
     color1: { value: DEFAULTS.color1 },
@@ -255,6 +258,16 @@ export const text: GeneratorDef<Params> = {
             // anti-confetti: occlusion leaves tiny fragments where connectors graze letters
             .filter((l) => polylineLength(l.points) >= p.occlusionGap)
         : items.flatMap((it) => it.lanes);
+    }
+
+    // Rotate the finished bands (connector swings stay baseline-relative); fit re-centers.
+    if (p.rotationDeg !== 0) {
+      const th = (p.rotationDeg * Math.PI) / 180;
+      const cos = Math.cos(th), sin = Math.sin(th);
+      bands = bands.map((l) => ({
+        ...l,
+        points: l.points.map(([x, y]): Point => [x * cos - y * sin, x * sin + y * cos]),
+      }));
     }
 
     const fitted = fitToCanvas(bands, canvas.wMm, canvas.hMm, p.marginMm);
