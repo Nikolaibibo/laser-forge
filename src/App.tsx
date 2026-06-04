@@ -12,6 +12,7 @@ import { LayerControls } from "./ui/LayerControls";
 import { readHash } from "./state/urlSync";
 import type { Artwork } from "./generators/types";
 import { PlotterPanel } from "./ui/PlotterPanel";
+import { MotifPanel } from "./ui/MotifPanel";
 
 // Hash layer UID to a stable per-layer seed offset so each layer is deterministic.
 const hashUid = (uid: string): number => {
@@ -30,11 +31,13 @@ function Stage({ generatorId }: { generatorId: string }) {
   const h = useApp((s) => s.canvasHMm);
   const layers = useApp((s) => s.layers);
   const layerParams = useApp((s) => s.layerParams);
+  const motif = useApp((s) => s.motif);
   const baseParams = useGeneratorParams(gen);
 
   const baseArt = useMemo(
     () => gen.generate(baseParams, seed, { wMm: w, hMm: h }),
-    [gen, baseParams, seed, w, h],
+    // motif: blueprint reads it from the store — re-generate on upload/clear
+    [gen, baseParams, seed, w, h, motif],
   );
 
   const finalArt = useMemo<Artwork>(() => {
@@ -123,6 +126,7 @@ export default function App() {
           BASE
         </div>
         <GeneratorPicker />
+        <MotifPanel />
         <LayerStack />
         <div style={{ flex: 1 }} />
         <footer

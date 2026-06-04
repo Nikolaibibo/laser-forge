@@ -807,7 +807,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - Create: `src/ui/MotifPanel.tsx`
 - Modify: `src/App.tsx`
 
-- [ ] **Step 1: MotifPanel implementieren**
+- [x] **Step 1: MotifPanel implementieren**
 
 `src/ui/MotifPanel.tsx` anlegen:
 
@@ -884,7 +884,7 @@ export function MotifPanel() {
 }
 ```
 
-- [ ] **Step 2: App.tsx verdrahten**
+- [x] **Step 2: App.tsx verdrahten**
 
 In `src/App.tsx`:
 
@@ -932,7 +932,7 @@ Im Browser (localhost:5173):
 
 Expected: alle 5 Punkte wie beschrieben.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/ui/MotifPanel.tsx src/App.tsx
