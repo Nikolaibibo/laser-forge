@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useApp } from "../state/store";
 import { PlotterPort } from "../plotter/webserial";
 import { Grbl } from "../plotter/grbl";
-import { artworkToGcode, outlineGcode, bbox, DEFAULT_PEN } from "../plotter/gcode";
+import { artworkToGcode, outlineGcode, bbox, flipArtworkY, DEFAULT_PEN } from "../plotter/gcode";
 import { streamJob } from "../plotter/streamJob";
 import { mergePaths } from "../util/mergePaths";
 import { splitByStroke } from "../plotter/penSplit";
@@ -100,9 +100,10 @@ export function PlotterPanel() {
     const polys = joinPaths ? mergePaths(artwork.polylines) : artwork.polylines;
     const merged = { ...artwork, polylines: polys };
     try {
+      // bbox in MACHINE space (y flipped) so the trace matches where the art will land
       await streamJob(
         portRef.current!,
-        outlineGcode(bbox(merged), { ...DEFAULT_PEN, feed }, draw),
+        outlineGcode(bbox(flipArtworkY(merged)), { ...DEFAULT_PEN, feed }, draw),
         {},
       );
     } catch (e) {

@@ -85,7 +85,23 @@ export function orderPolylines(lines: Polyline[]): Polyline[] {
 }
 
 /**
+ * Mirror an artwork's Y axis (SVG/screen y grows DOWN, machine y grows UP).
+ * Without this every plot comes out mirrored — invisible on abstract motifs,
+ * obvious on text.
+ */
+export function flipArtworkY(art: Artwork): Artwork {
+  return {
+    ...art,
+    polylines: art.polylines.map((l) => ({
+      ...l,
+      points: l.points.map(([x, y]) => [x, art.heightMm - y] as [number, number]),
+    })),
+  };
+}
+
+/**
  * Convert an Artwork to an array of G-code lines for a GRBL servo pen-plotter.
+ * Artwork is in SVG space (y down); output is machine space (y up) via flipArtworkY.
  * CRITICAL: pen up = M3 S20, pen down = M3 S160. M5 is NEVER emitted.
  */
 export function artworkToGcode(art: Artwork, opts: PenOpts = DEFAULT_PEN): string[] {
@@ -98,7 +114,7 @@ export function artworkToGcode(art: Artwork, opts: PenOpts = DEFAULT_PEN): strin
   lines.push(penUp);
   lines.push(`G4 P${dwellUp}`);
 
-  const ordered = orderPolylines(art.polylines);
+  const ordered = orderPolylines(flipArtworkY(art).polylines);
 
   for (const pl of ordered) {
     const pts = pl.points;
