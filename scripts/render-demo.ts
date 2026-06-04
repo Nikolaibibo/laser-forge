@@ -28,12 +28,21 @@ for (const kv of overrides) {
     continue;
   }
   if (k === "motif") {
-    const src = readFileSync(v, "utf8");
-    useApp.getState().setMotif({ name: basename(v), ...parseSvgMotif(src) });
+    try {
+      const src = readFileSync(v, "utf8");
+      useApp.getState().setMotif({ name: basename(v), ...parseSvgMotif(src) });
+    } catch (e) {
+      console.error(`motif=${v}: ${e instanceof Error ? e.message : e}`);
+      process.exit(1);
+    }
     continue;
   }
   if (k === "canvas") {
     const [cw, ch] = v.split("x").map(Number);
+    if (!isFinite(cw) || !isFinite(ch)) {
+      console.error(`canvas= expects WxH in mm, got: ${v}`);
+      process.exit(1);
+    }
     canvasW = cw;
     canvasH = ch;
     continue;
