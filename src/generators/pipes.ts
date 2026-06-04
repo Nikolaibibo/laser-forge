@@ -19,6 +19,9 @@ type Params = {
   crossing: number;       // 0..1 P(both pipes pass through when N+W meet) — wang model
   colorFraction: number;  // 0..1 share of colored components
   colorStrategy: "largestFirst" | "random"; // largestFirst = longest pipes get accent colors
+  colorCount: number;     // 1..6 — how many of the color slots below form the palette
+  color1: string; color2: string; color3: string;
+  color4: string; color5: string; color6: string;
   occlusion: boolean;     // pipes pass over/under each other (z-order gaps)
   occlusionGapMm: number; // clear gap carved beside the band that passes over
   arcSamples: number;
@@ -29,11 +32,13 @@ const DEFAULTS: Params = {
   model: "wang",
   cols: 14, rows: 18, lanes: 6, laneSpacingMm: 0.7,
   straightness: 0.55, density: 0.5, crossing: 0.45, colorFraction: 0.35,
-  colorStrategy: "largestFirst", occlusion: true, occlusionGapMm: 1.0,
+  colorStrategy: "largestFirst",
+  colorCount: 3,
+  color1: "#e0584f", color2: "#4f86e0", color3: "#5fcaa8",
+  color4: "#e8a33d", color5: "#8d5fc9", color6: "#e96a3a",
+  occlusion: true, occlusionGapMm: 1.0,
   arcSamples: 14, marginMm: 15,
 };
-
-const PALETTE = ["#e0584f", "#4f86e0", "#5fcaa8"];
 
 function sampleArc(cx: number, cy: number, a0: number, a1: number, r: number, n: number): Point[] {
   const pts: Point[] = [];
@@ -164,7 +169,7 @@ export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",
   description:
-    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors). crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Reseed reshuffles field + z-order.",
+    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors); the accent palette itself is colorCount + color1…color6. crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Reseed reshuffles field + z-order.",
   defaults: DEFAULTS,
   schema: {
     model: { value: DEFAULTS.model, options: ["wang", "classic"] },
@@ -177,6 +182,15 @@ export const pipes: GeneratorDef<Params> = {
     crossing: { value: DEFAULTS.crossing, min: 0, max: 1, step: 0.05 },
     colorFraction: { value: DEFAULTS.colorFraction, min: 0, max: 1, step: 0.05 },
     colorStrategy: { value: DEFAULTS.colorStrategy, options: ["largestFirst", "random"] },
+    colorCount: { value: DEFAULTS.colorCount, min: 1, max: 6, step: 1 },
+    // Picker slots above colorCount are hidden (leva render hook; keys are
+    // namespaced by the folder name = generator name).
+    color1: { value: DEFAULTS.color1 },
+    color2: { value: DEFAULTS.color2, render: (get) => get("Truchet Pipes.colorCount") >= 2 },
+    color3: { value: DEFAULTS.color3, render: (get) => get("Truchet Pipes.colorCount") >= 3 },
+    color4: { value: DEFAULTS.color4, render: (get) => get("Truchet Pipes.colorCount") >= 4 },
+    color5: { value: DEFAULTS.color5, render: (get) => get("Truchet Pipes.colorCount") >= 5 },
+    color6: { value: DEFAULTS.color6, render: (get) => get("Truchet Pipes.colorCount") >= 6 },
     occlusion: { value: DEFAULTS.occlusion },
     occlusionGapMm: { value: DEFAULTS.occlusionGapMm, min: 0.2, max: 4, step: 0.1 },
     arcSamples: { value: DEFAULTS.arcSamples, min: 4, max: 32, step: 1 },
@@ -195,6 +209,10 @@ export const pipes: GeneratorDef<Params> = {
 
     const components = mergePaths(strokes, 1e-3);
 
+    // Accent palette = the first colorCount picker slots.
+    const palette = [p.color1, p.color2, p.color3, p.color4, p.color5, p.color6]
+      .slice(0, Math.min(6, Math.max(1, Math.round(p.colorCount))));
+
     const offsets = symmetricOffsets(p.lanes, p.laneSpacingMm);
 
     // One entry per pipe: centerline + offset band, length for colorStrategy.
@@ -210,12 +228,12 @@ export const pipes: GeneratorDef<Params> = {
       const byLength = [...comps].sort((a, b) => b.lengthMm - a.lengthMm);
       const nColored = Math.round(comps.length * p.colorFraction);
       byLength.forEach((c, i) => {
-        if (i < nColored) c.stroke = PALETTE[i % PALETTE.length];
+        if (i < nColored) c.stroke = palette[i % palette.length];
       });
     } else {
       let colorIdx = 0;
       for (const c of comps) {
-        if (rng() < p.colorFraction) c.stroke = PALETTE[colorIdx++ % PALETTE.length];
+        if (rng() < p.colorFraction) c.stroke = palette[colorIdx++ % palette.length];
       }
     }
 

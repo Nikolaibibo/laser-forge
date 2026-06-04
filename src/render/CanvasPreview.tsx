@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Artwork } from "../generators/types";
+import { useApp } from "../state/store";
 
 type Props = {
   artwork: Artwork;
@@ -8,6 +9,7 @@ type Props = {
 export function CanvasPreview({ artwork }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const penWidthMm = useApp((s) => s.penWidthMm);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,7 +49,7 @@ export function CanvasPreview({ artwork }: Props) {
       ctx.save();
       ctx.scale(scale, scale);
       ctx.strokeStyle = "#111";
-      ctx.lineWidth = 0.3;
+      ctx.lineWidth = penWidthMm; // mm-space: renders true to physical pen width
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
@@ -69,7 +71,7 @@ export function CanvasPreview({ artwork }: Props) {
     const ro = new ResizeObserver(draw);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [artwork]);
+  }, [artwork, penWidthMm]);
 
   return (
     <div

@@ -80,6 +80,7 @@ export default function App() {
         canvasHMm: h.h,
         layers: h.l ?? [],
         layerParams: h.lp ?? {},
+        penWidthMm: h.pw ?? 0.3,
       });
     }
   }, [hydrate]);

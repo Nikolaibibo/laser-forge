@@ -17,6 +17,8 @@ export function ExportBar({ artwork, currentParams }: Props) {
   const w = useApp((s) => s.canvasWMm);
   const h = useApp((s) => s.canvasHMm);
   const setCanvas = useApp((s) => s.setCanvas);
+  const penWidthMm = useApp((s) => s.penWidthMm);
+  const setPenWidthMm = useApp((s) => s.setPenWidthMm);
   const layers = useApp((s) => s.layers);
   const layerParams = useApp((s) => s.layerParams);
   const [copied, setCopied] = useState(false);
@@ -32,6 +34,7 @@ export function ExportBar({ artwork, currentParams }: Props) {
       p: currentParams,
       l: layers,
       lp: layerParams,
+      pw: penWidthMm,
     };
     writeHash(payload);
     await navigator.clipboard.writeText(window.location.href);
@@ -87,6 +90,18 @@ export function ExportBar({ artwork, currentParams }: Props) {
         />
         mm
       </label>
+      <label title="Stroke width in preview + SVG export. 0.3 Fineliner · 0.5 Gel · 1–2 Filzstift.">
+        Pen{" "}
+        <input
+          type="number"
+          value={penWidthMm}
+          min={0.05}
+          step={0.1}
+          onChange={(e) => setPenWidthMm(Number(e.target.value))}
+          style={{ ...inputStyle, width: 56 }}
+        />
+        mm
+      </label>
       <div style={{ flex: 1 }} />
       <span style={{ color: "#777" }}>
         {lineCount} lines · {pointCount.toLocaleString("en-US")} points
@@ -117,7 +132,7 @@ export function ExportBar({ artwork, currentParams }: Props) {
         Join paths
       </label>
       <button
-        onClick={() => downloadSvg(artwork, `${generatorId}-${seed}.svg`, { dedupe, join })}
+        onClick={() => downloadSvg(artwork, `${generatorId}-${seed}.svg`, { dedupe, join, strokeWidthMm: penWidthMm })}
         style={{ ...btnStyle, background: "#e96a3a", color: "#fff" }}
       >
         ⬇ SVG

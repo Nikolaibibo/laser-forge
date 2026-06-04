@@ -12,6 +12,8 @@ export type SvgExportOptions = {
   dedupe?: boolean;
   /** Join open polylines whose endpoints coincide into longer continuous paths. */
   join?: boolean;
+  /** Stroke width in mm (cosmetic for plotting — the plotter only follows paths). */
+  strokeWidthMm?: number;
 };
 
 /**
@@ -43,7 +45,7 @@ export const svgExport = (art: Artwork, opts: SvgExportOptions = {}): string => 
 <svg xmlns="http://www.w3.org/2000/svg"
      width="${widthMm}mm" height="${heightMm}mm"
      viewBox="0 0 ${widthMm} ${heightMm}"
-     fill="none" stroke="black" stroke-width="0.3"
+     fill="none" stroke="black" stroke-width="${opts.strokeWidthMm ?? 0.3}"
      stroke-linecap="round" stroke-linejoin="round">
   ${paths}
 </svg>

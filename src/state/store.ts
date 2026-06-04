@@ -12,6 +12,8 @@ export type AppState = {
   seed: number;
   canvasWMm: number;
   canvasHMm: number;
+  /** Pen stroke width in mm — preview + SVG export (0.3 fineliner … 1–2 felt-tip). */
+  penWidthMm: number;
   layers: Layer[];
   /** Parameter values per layer (written by LayerControls). */
   layerParams: Record<string, Record<string, unknown>>;
@@ -19,6 +21,7 @@ export type AppState = {
   setSeed: (seed: number) => void;
   randomSeed: () => void;
   setCanvas: (w: number, h: number) => void;
+  setPenWidthMm: (mm: number) => void;
   addLayer: (distortionId: string) => void;
   removeLayer: (uid: string) => void;
   toggleLayer: (uid: string) => void;
@@ -47,12 +50,14 @@ export const useApp = create<AppState>((set) => ({
   seed: 1337,
   canvasWMm: 200,
   canvasHMm: 200,
+  penWidthMm: 0.3,
   layers: [],
   layerParams: {},
   setGenerator: (id) => set({ generatorId: id }),
   setSeed: (seed) => set({ seed }),
   randomSeed: () => set({ seed: Math.floor(Math.random() * 1_000_000) }),
   setCanvas: (w, h) => set({ canvasWMm: w, canvasHMm: h }),
+  setPenWidthMm: (mm) => set({ penWidthMm: Math.max(0.05, mm) }),
   addLayer: (distortionId) =>
     set((s) => ({
       layers: [...s.layers, { uid: nextUid(), distortionId, enabled: true }],
