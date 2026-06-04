@@ -6,6 +6,13 @@ export const dist = (a: Point, b: Point): number => {
   return Math.sqrt(dx * dx + dy * dy);
 };
 
+/** Total length (mm) of a polyline's segments. */
+export const polylineLength = (pts: Point[]): number => {
+  let total = 0;
+  for (let i = 0; i < pts.length - 1; i++) total += dist(pts[i], pts[i + 1]);
+  return total;
+};
+
 export type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 
 export const polylineBounds = (lines: Polyline[]): Bounds => {

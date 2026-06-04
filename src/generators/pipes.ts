@@ -2,9 +2,11 @@
 import type { GeneratorDef, Point, Polyline } from "./types";
 import { makeRng } from "../util/random";
 import type { RNG } from "../util/random";
-import { fitToCanvas } from "../util/path";
+import { fitToCanvas, polylineLength } from "../util/path";
 import { offsetPath, symmetricOffsets } from "../util/offset";
 import { mergePaths } from "../util/mergePaths";
+import { occlude } from "../util/occlusion";
+import type { OcclItem } from "../util/occlusion";
 
 type Params = {
   model: "classic" | "wang";
@@ -14,7 +16,11 @@ type Params = {
   laneSpacingMm: number;
   straightness: number;   // classic = P(cross tile); wang = P(straight pass-through at a turn)
   density: number;        // 0..1 edge-open probability (wang model)
+  crossing: number;       // 0..1 P(both pipes pass through when N+W meet) — wang model
   colorFraction: number;  // 0..1 share of colored components
+  colorStrategy: "largestFirst" | "random"; // largestFirst = longest pipes get accent colors
+  occlusion: boolean;     // pipes pass over/under each other (z-order gaps)
+  occlusionGapMm: number; // clear gap carved beside the band that passes over
   arcSamples: number;
   marginMm: number;
 };
@@ -22,7 +28,9 @@ type Params = {
 const DEFAULTS: Params = {
   model: "wang",
   cols: 14, rows: 18, lanes: 6, laneSpacingMm: 0.7,
-  straightness: 0.55, density: 0.5, colorFraction: 0.35, arcSamples: 14, marginMm: 15,
+  straightness: 0.55, density: 0.5, crossing: 0.45, colorFraction: 0.35,
+  colorStrategy: "largestFirst", occlusion: true, occlusionGapMm: 1.0,
+  arcSamples: 14, marginMm: 15,
 };
 
 const PALETTE = ["#e0584f", "#4f86e0", "#5fcaa8"];
@@ -39,17 +47,19 @@ function sampleArc(cx: number, cy: number, a0: number, a1: number, r: number, n:
 export type Pair = "NS" | "WE" | "NE" | "NW" | "SE" | "SW";
 
 /**
- * Picks the two (or zero) open edges for a cell so its degree (n+w+e+s) is 0 or 2
- * (crossing-free). N and W are already fixed by the sweep; this chooses e and s.
- * The returned `pair` labels the two edges the tile's stroke connects — e.g. for
- * inDeg===2 the pair "NW" connects the incoming North and West edges (both consumed,
- * no new edge opens).
+ * Picks the open edges for a cell. N and W are already fixed by the sweep; this
+ * chooses e and s. The returned `pair` labels the edges the tile's stroke connects —
+ * e.g. for inDeg===2 the pair "NW" connects the incoming North and West edges.
+ * With `crossing` > 0, an inDeg===2 cell may instead pass BOTH pipes straight through
+ * ("CROSS": N–S plus W–E, degree 4) — the over/under look comes from occlusion.
  */
 export function chooseTile(
-  n: 0 | 1, w: 0 | 1, rng: RNG, straightness: number, density: number,
-): { e: 0 | 1; s: 0 | 1; pair: Pair | null } {
+  n: 0 | 1, w: 0 | 1, rng: RNG, straightness: number, density: number, crossing = 0,
+): { e: 0 | 1; s: 0 | 1; pair: Pair | "CROSS" | null } {
   const inDeg = n + w;
-  if (inDeg === 2) return { e: 0, s: 0, pair: "NW" };
+  if (inDeg === 2) {
+    return rng() < crossing ? { e: 1, s: 1, pair: "CROSS" } : { e: 0, s: 0, pair: "NW" };
+  }
   if (inDeg === 1) {
     if (n === 1) {
       return rng() < straightness ? { e: 0, s: 1, pair: "NS" } : { e: 1, s: 0, pair: "NE" };
@@ -103,7 +113,7 @@ export function wangTileStroke(
 
 export function wangField(
   cols: number, rows: number, c: number, arcSamples: number,
-  straightness: number, density: number, rng: RNG,
+  straightness: number, density: number, rng: RNG, crossing = 0,
 ): Polyline[] {
   // Edge state. H[x][y]: horizontal edge above cell (x,y); x∈[0,cols), y∈[0,rows].
   // V[x][y]: vertical edge left of cell (x,y); x∈[0,cols], y∈[0,rows).
@@ -120,10 +130,14 @@ export function wangField(
     for (let x = 0; x < cols; x++) {
       const n: 0 | 1 = H[x][y] ? 1 : 0;
       const w: 0 | 1 = V[x][y] ? 1 : 0;
-      const { e, s, pair } = chooseTile(n, w, rng, straightness, density);
+      const { e, s, pair } = chooseTile(n, w, rng, straightness, density, crossing);
       H[x][y + 1] = s === 1;
       V[x + 1][y] = e === 1;
-      if (pair !== null) {
+      if (pair === "CROSS") {
+        // Both pipes pass straight through; they cross mid-cell (resolved by occlusion).
+        strokes.push({ points: wangTileStroke("NS", x * c, y * c, c, arcSamples), closed: false });
+        strokes.push({ points: wangTileStroke("WE", x * c, y * c, c, arcSamples), closed: false });
+      } else if (pair !== null) {
         strokes.push({ points: wangTileStroke(pair, x * c, y * c, c, arcSamples), closed: false });
       }
     }
@@ -150,7 +164,7 @@ export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",
   description:
-    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes. model switches between 'wang' (distinct non-crossing pipes, default) and 'classic' (crossing Truchet grid); density (wang only) sets how densely pipes fill the field. Reseed reshuffles the field.",
+    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors). crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Reseed reshuffles field + z-order.",
   defaults: DEFAULTS,
   schema: {
     model: { value: DEFAULTS.model, options: ["wang", "classic"] },
@@ -160,7 +174,11 @@ export const pipes: GeneratorDef<Params> = {
     laneSpacingMm: { value: DEFAULTS.laneSpacingMm, min: 0.3, max: 3, step: 0.1 },
     straightness: { value: DEFAULTS.straightness, min: 0, max: 1, step: 0.05 },
     density: { value: DEFAULTS.density, min: 0.05, max: 1, step: 0.05 },
+    crossing: { value: DEFAULTS.crossing, min: 0, max: 1, step: 0.05 },
     colorFraction: { value: DEFAULTS.colorFraction, min: 0, max: 1, step: 0.05 },
+    colorStrategy: { value: DEFAULTS.colorStrategy, options: ["largestFirst", "random"] },
+    occlusion: { value: DEFAULTS.occlusion },
+    occlusionGapMm: { value: DEFAULTS.occlusionGapMm, min: 0.2, max: 4, step: 0.1 },
     arcSamples: { value: DEFAULTS.arcSamples, min: 4, max: 32, step: 1 },
     marginMm: { value: DEFAULTS.marginMm, min: 0, max: 40, step: 1 },
   },
@@ -172,22 +190,48 @@ export const pipes: GeneratorDef<Params> = {
     const c = Math.max(10, (bandHalf + 2 * p.laneSpacingMm) * 2);
 
     const strokes = p.model === "wang"
-      ? wangField(cols, rows, c, p.arcSamples, p.straightness, p.density, rng)
+      ? wangField(cols, rows, c, p.arcSamples, p.straightness, p.density, rng, p.crossing)
       : classicField(cols, rows, c, p.arcSamples, p.straightness, rng);
 
     const components = mergePaths(strokes, 1e-3);
 
     const offsets = symmetricOffsets(p.lanes, p.laneSpacingMm);
-    let colorIdx = 0;
-    const all: Polyline[] = [];
-    for (const comp of components) {
+
+    // One entry per pipe: centerline + offset band, length for colorStrategy.
+    type Comp = { center: Point[]; lanes: Polyline[]; lengthMm: number; stroke?: string };
+    const comps: Comp[] = components.map((comp) => {
       const center = comp.closed ? [...comp.points, comp.points[0]] : comp.points;
-      const colored = rng() < p.colorFraction;
-      const stroke = colored ? PALETTE[colorIdx++ % PALETTE.length] : undefined;
-      const band = offsetPath(center, offsets, { minInnerRadiusMm: p.laneSpacingMm });
-      for (const lane of band) {
-        all.push(stroke ? { ...lane, stroke } : lane);
+      const lanes = offsetPath(center, offsets, { minInnerRadiusMm: p.laneSpacingMm });
+      return { center, lanes, lengthMm: polylineLength(center) };
+    });
+
+    if (p.colorStrategy === "largestFirst") {
+      // Longest pipes get the accent colors — deterministic, no rng draw.
+      const byLength = [...comps].sort((a, b) => b.lengthMm - a.lengthMm);
+      const nColored = Math.round(comps.length * p.colorFraction);
+      byLength.forEach((c, i) => {
+        if (i < nColored) c.stroke = PALETTE[i % PALETTE.length];
+      });
+    } else {
+      let colorIdx = 0;
+      for (const c of comps) {
+        if (rng() < p.colorFraction) c.stroke = PALETTE[colorIdx++ % PALETTE.length];
       }
+    }
+
+    const laneOf = (c: Comp, l: Polyline): Polyline => (c.stroke ? { ...l, stroke: c.stroke } : l);
+
+    let all: Polyline[];
+    if (p.occlusion) {
+      // Seeded z per pipe; higher z passes over and carves a gap into lower pipes.
+      const items: OcclItem[] = comps.map((c) => ({
+        z: rng(),
+        centerline: c.center,
+        lanes: c.lanes.map((l) => laneOf(c, l)),
+      }));
+      all = occlude(items, { gapMm: p.occlusionGapMm, bandHalfMm: bandHalf });
+    } else {
+      all = comps.flatMap((c) => c.lanes.map((l) => laneOf(c, l)));
     }
 
     const fitted = fitToCanvas(all, canvas.wMm, canvas.hMm, p.marginMm);
