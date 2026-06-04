@@ -2,6 +2,9 @@
 import type { GeneratorDef, Point, Polyline } from "./types";
 import { FUTURAL } from "./hersheyFutural";
 import { CURSIVE } from "./hersheyCursive";
+import { TIMESR } from "./hersheyTimesr";
+import { TIMESRB } from "./hersheyTimesrb";
+import { TIMESI } from "./hersheyTimesi";
 import type { HersheyGlyph } from "./hersheyFutural";
 import { offsetBand } from "../util/offset";
 import { fitToCanvas, polylineLength } from "../util/path";
@@ -9,10 +12,14 @@ import { makeRng, randInt } from "../util/random";
 import { occlude } from "../util/occlusion";
 import type { OcclItem } from "../util/occlusion";
 
-export type HersheyFontId = "simplex" | "cursive";
+export type HersheyFontId = "simplex" | "cursive" | "serif" | "serifBold" | "serifItalic";
+export const FONT_IDS: HersheyFontId[] = ["simplex", "cursive", "serif", "serifBold", "serifItalic"];
 const FONTS: Record<HersheyFontId, Record<number, HersheyGlyph>> = {
   simplex: FUTURAL,
   cursive: CURSIVE,
+  serif: TIMESR,
+  serifBold: TIMESRB,
+  serifItalic: TIMESI,
 };
 
 /** Hershey line height in font units (cap −12 … baseline 9, plus leading). */
@@ -159,7 +166,7 @@ export const text: GeneratorDef<Params> = {
   defaults: DEFAULTS,
   schema: {
     text: { value: DEFAULTS.text },
-    font: { value: DEFAULTS.font, options: ["simplex", "cursive"] },
+    font: { value: DEFAULTS.font, options: FONT_IDS },
     lanesMin: { value: DEFAULTS.lanesMin, min: 2, max: 16, step: 1 },
     lanesMax: { value: DEFAULTS.lanesMax, min: 2, max: 16, step: 1 },
     laneSpacingMm: { value: DEFAULTS.laneSpacingMm, min: 0.3, max: 3, step: 0.1 },

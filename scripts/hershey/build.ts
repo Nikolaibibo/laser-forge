@@ -10,13 +10,26 @@ const here = dirname(fileURLToPath(import.meta.url));
 const FONTS = [
   { jhf: "futural.jhf", out: "hersheyFutural.ts", exportName: "FUTURAL", label: 'Hershey Simplex ("futural")' },
   { jhf: "cursive.jhf", out: "hersheyCursive.ts", exportName: "CURSIVE", label: 'Hershey Cursive ("cursive")' },
+  { jhf: "timesr.jhf",  out: "hersheyTimesr.ts",  exportName: "TIMESR",  label: 'Hershey Times Roman ("timesr")' },
+  { jhf: "timesrb.jhf", out: "hersheyTimesrb.ts", exportName: "TIMESRB", label: 'Hershey Times Roman Bold ("timesrb")' },
+  { jhf: "timesi.jhf",  out: "hersheyTimesi.ts",  exportName: "TIMESI",  label: 'Hershey Times Italic ("timesi")' },
 ];
 
 const R = "R".charCodeAt(0);
 
 for (const font of FONTS) {
   const jhf = readFileSync(join(here, font.jhf), "utf8");
-  const lines = jhf.split("\n").filter((l) => l.trim().length > 0);
+  // JHF logical records: cols 0-4 glyph id, cols 5-7 vertex count (incl. the
+  // left/right pair = 2 chars per vertex). Long glyphs wrap across physical
+  // lines — join until the declared data length is reached.
+  const physical = jhf.split("\n").filter((l) => l.length > 0);
+  const lines: string[] = [];
+  for (let i = 0; i < physical.length; ) {
+    let line = physical[i++];
+    const nverts = parseInt(line.slice(5, 8), 10);
+    while (line.length - 8 < nverts * 2 && i < physical.length) line += physical[i++];
+    lines.push(line);
+  }
   const entries: string[] = [];
 
   lines.forEach((line, i) => {
