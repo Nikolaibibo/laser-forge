@@ -11,6 +11,7 @@ import { spirograph } from "./spirograph";
 import { truchet } from "./truchet";
 import { pipes } from "./pipes";
 import { loops } from "./loops";
+import { folds } from "./folds";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATORS: GeneratorDef<any>[] = [
@@ -26,6 +27,7 @@ export const GENERATORS: GeneratorDef<any>[] = [
   differentialGrowth,
   pipes,
   loops,
+  folds,
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
