@@ -36,7 +36,7 @@ const DEFAULTS: Params = {
   noiseScale: 0.012, curlFactor: Math.PI * 2,
   lanesMin: 4, lanesMax: 8, laneSpacingMm: 1.2,
   endCaps: true, capSamples: 12, minSeedSepMm: 12,
-  colorFraction: 0, colorStrategy: "largestFirst",
+  colorFraction: 0.35, colorStrategy: "largestFirst",
   colorCount: 3,
   color1: "#e0584f", color2: "#4f86e0", color3: "#5fcaa8",
   color4: "#e8a33d", color5: "#8d5fc9", color6: "#e96a3a",
@@ -96,7 +96,7 @@ export const ribbons: GeneratorDef<Params> = {
   id: "ribbons",
   name: "Flow Ribbons",
   description:
-    "Few fat meandering ribbons: noise-field streamlines with a per-ribbon phase (so ribbons cross and weave) and a turn-radius clamp ≥ half band width (inner lanes never collapse). Band width per ribbon is seeded from [lanesMin, lanesMax]; endCaps closes the tips with nested semicircular caps; occlusion resolves crossings as over/under. colorFraction 0 = monochrome (reference look).",
+    "Few fat meandering ribbons: noise-field streamlines with a per-ribbon phase (so ribbons cross and weave) and a turn-radius clamp ≥ half band width (inner lanes never collapse). Band width per ribbon is seeded from [lanesMin, lanesMax]; endCaps closes the tips with nested semicircular caps; occlusion resolves crossings as over/under. colorFraction 0 = monochrome (reference look), default 0.35 colors the longest ribbons.",
   defaults: DEFAULTS,
   schema: {
     count: { value: DEFAULTS.count, min: 1, max: 60, step: 1 },
