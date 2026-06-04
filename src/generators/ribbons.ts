@@ -15,6 +15,8 @@ type Params = {
   stepMm: number;
   noiseScale: number;
   curlFactor: number;     // angle range of the noise field (radians)
+  angleSteps: number;     // 0 = organic; N>0 quantizes headings to N global directions (straight runs + constant-radius arcs)
+  turnRadiusMm: number;   // arc radius for heading changes (clamped up to bandHalf + spacing)
   lanesMin: number;       // band width per ribbon is seeded from [lanesMin, lanesMax]
   lanesMax: number;
   laneSpacingMm: number;
@@ -34,6 +36,7 @@ type Params = {
 const DEFAULTS: Params = {
   count: 16, lenMinMm: 100, lenMaxMm: 300, stepMm: 1.0,
   noiseScale: 0.012, curlFactor: Math.PI * 2,
+  angleSteps: 8, turnRadiusMm: 6,
   lanesMin: 4, lanesMax: 8, laneSpacingMm: 1.2,
   endCaps: true, capSamples: 12, minSeedSepMm: 12,
   colorFraction: 0.35, colorStrategy: "largestFirst",
@@ -66,12 +69,19 @@ function traceDir(
   const maxTurn = p.stepMm / Math.max(rMinMm, p.stepMm); // radians per step
   const steps = Math.max(2, Math.round(lenMm / p.stepMm));
   const flip = dir < 0 ? Math.PI : 0;
+  // angleSteps > 0: snap target headings to N GLOBAL directions (the quantization
+  // collapses the per-ribbon phase onto one shared direction grid). The turn clamp
+  // then renders every direction change as an arc of constant radius rMinMm.
+  const quant = Math.floor(p.angleSteps) > 0 ? (Math.PI * 2) / Math.floor(p.angleSteps) : 0;
+  const aim = (ax: number, ay: number): number => {
+    const raw = noise(ax * p.noiseScale, ay * p.noiseScale) * p.curlFactor + phase + flip;
+    return quant > 0 ? Math.round(raw / quant) * quant : raw;
+  };
   let [x, y] = start;
-  let heading = noise(x * p.noiseScale, y * p.noiseScale) * p.curlFactor + phase + flip;
+  let heading = aim(x, y);
   const pts: Point[] = [[x, y]];
   for (let s = 0; s < steps; s++) {
-    const target = noise(x * p.noiseScale, y * p.noiseScale) * p.curlFactor + phase + flip;
-    const d = angleDiff(heading, target);
+    const d = angleDiff(heading, aim(x, y));
     heading += Math.max(-maxTurn, Math.min(maxTurn, d));
     x += Math.cos(heading) * p.stepMm;
     y += Math.sin(heading) * p.stepMm;
@@ -96,7 +106,7 @@ export const ribbons: GeneratorDef<Params> = {
   id: "ribbons",
   name: "Flow Ribbons",
   description:
-    "Few fat meandering ribbons: noise-field streamlines with a per-ribbon phase (so ribbons cross and weave) and a turn-radius clamp ≥ half band width (inner lanes never collapse). Band width per ribbon is seeded from [lanesMin, lanesMax]; endCaps closes the tips with nested semicircular caps; occlusion resolves crossings as over/under. colorFraction 0 = monochrome (reference look), default 0.35 colors the longest ribbons.",
+    "Few fat meandering ribbons: noise-field streamlines with a per-ribbon phase (so ribbons cross and weave). angleSteps quantizes headings to N global directions — straight runs joined by constant-radius arcs (turnRadiusMm, never below half band width; 0 = fully organic). Band width per ribbon is seeded from [lanesMin, lanesMax]; endCaps closes the tips with nested semicircular caps; occlusion resolves crossings as over/under. colorFraction 0 = monochrome (reference look), default 0.35 colors the longest ribbons.",
   defaults: DEFAULTS,
   schema: {
     count: { value: DEFAULTS.count, min: 1, max: 60, step: 1 },
@@ -105,6 +115,8 @@ export const ribbons: GeneratorDef<Params> = {
     stepMm: { value: DEFAULTS.stepMm, min: 0.4, max: 3, step: 0.1 },
     noiseScale: { value: DEFAULTS.noiseScale, min: 0.002, max: 0.05, step: 0.001 },
     curlFactor: { value: DEFAULTS.curlFactor, min: Math.PI / 2, max: Math.PI * 6, step: 0.1 },
+    angleSteps: { value: DEFAULTS.angleSteps, min: 0, max: 12, step: 1 },
+    turnRadiusMm: { value: DEFAULTS.turnRadiusMm, min: 1, max: 30, step: 0.5 },
     lanesMin: { value: DEFAULTS.lanesMin, min: 2, max: 16, step: 1 },
     lanesMax: { value: DEFAULTS.lanesMax, min: 2, max: 16, step: 1 },
     laneSpacingMm: { value: DEFAULTS.laneSpacingMm, min: 0.3, max: 3, step: 0.1 },
@@ -157,7 +169,8 @@ export const ribbons: GeneratorDef<Params> = {
       if (seeds.some(([qx, qy]) => (qx - sx) * (qx - sx) + (qy - sy) * (qy - sy) < sep2)) continue;
 
       const bandHalf = ((k - 1) * p.laneSpacingMm) / 2;
-      const rMin = bandHalf + p.laneSpacingMm;
+      // Arc radius: user choice, but never below what the band physically needs.
+      const rMin = Math.max(p.turnRadiusMm, bandHalf + p.laneSpacingMm);
       const center = traceCenterline([sx, sy], lenMm, phase, rMin, noise, p, xMin, yMin, xMax, yMax);
       if (center.length < 8) continue; // too short to read as a ribbon
 
