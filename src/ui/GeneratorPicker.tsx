@@ -1,61 +1,194 @@
+// src/ui/GeneratorPicker.tsx — active-generator card + full-sidebar overlay list.
+// Generator switching is rare (pick one, tune for a long time), so the 16-entry
+// list lives behind one click instead of permanently eating ~900px of sidebar.
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { GENERATOR_GROUPS } from "../generators/registry";
 import { useApp } from "../state/store";
+
+const sectionLabel: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: 1,
+  color: "#bbb",
+};
+
+const cardStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  width: "100%",
+  textAlign: "left",
+  padding: "10px 12px",
+  background: "#1d1d1b",
+  border: "1px solid #2d2d2a",
+  borderRadius: 4,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+const overlayStyle: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  zIndex: 10,
+  background: "#141413",
+  overflowY: "auto",
+};
+
+const closeBtn: CSSProperties = {
+  width: 22,
+  height: 22,
+  padding: 0,
+  background: "#2d2d2a",
+  color: "#eee",
+  border: "1px solid #444",
+  borderRadius: 3,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 12,
+  lineHeight: 1,
+};
 
 export function GeneratorPicker() {
   const id = useApp((s) => s.generatorId);
   const set = useApp((s) => s.setGenerator);
+  const [open, setOpen] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  const activeGroup = GENERATOR_GROUPS.find((g) => g.items.some((it) => it.id === id));
+  const active = activeGroup?.items.find((it) => it.id === id);
+
+  // Close on Esc and on click outside the overlay.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const onDown = (e: MouseEvent) => {
+      if (overlayRef.current && !overlayRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("mousedown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mousedown", onDown);
+    };
+  }, [open]);
+
+  // Bring the active entry into view when the overlay opens.
+  useEffect(() => {
+    if (open) activeRef.current?.scrollIntoView({ block: "center" });
+  }, [open]);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {GENERATOR_GROUPS.map((group) => (
-        <div key={group.title}>
+    <div style={{ padding: "10px 14px", borderBottom: "1px solid #2d2d2a" }}>
+      <div style={{ ...sectionLabel, marginBottom: 6 }}>GENERATOR</div>
+
+      <button style={cardStyle} onClick={() => setOpen(true)} title="Change generator">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: "#fff" }}>
+            {active?.name ?? id}
+          </div>
+          <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>
+            {activeGroup?.title}
+          </div>
           <div
             style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: 1.2,
-              textTransform: "uppercase",
-              color: "#777",
-              padding: "12px 14px 4px",
+              fontSize: 11,
+              color: "#888",
+              marginTop: 4,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
-            {group.title}
+            {active?.description}
           </div>
-          {group.items.map((g) => {
-            const active = g.id === id;
-            return (
-              <button
-                key={g.id}
-                onClick={() => set(g.id)}
+        </div>
+        <span style={{ color: "#e96a3a", fontSize: 14, flexShrink: 0 }}>⇄</span>
+      </button>
+
+      {open && (
+        <div ref={overlayRef} style={overlayStyle}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 14px",
+              borderBottom: "1px solid #2d2d2a",
+              position: "sticky",
+              top: 0,
+              background: "#141413",
+              zIndex: 1,
+            }}
+          >
+            <div style={sectionLabel}>SELECT GENERATOR</div>
+            <button style={closeBtn} onClick={() => setOpen(false)} title="Close">
+              ✕
+            </button>
+          </div>
+
+          {GENERATOR_GROUPS.map((group) => (
+            <div key={group.title}>
+              <div
                 style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "10px 14px",
-                  background: active ? "#2d2d2a" : "transparent",
-                  color: active ? "#fff" : "#bbb",
-                  border: "none",
-                  borderLeft: active ? "3px solid #e96a3a" : "3px solid transparent",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontFamily: "inherit",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 1.2,
+                  textTransform: "uppercase",
+                  color: "#777",
+                  padding: "12px 14px 4px",
                 }}
               >
-                <div style={{ fontWeight: 600 }}>{g.name}</div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: active ? "#aaa" : "#666",
-                    marginTop: 2,
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {g.description}
-                </div>
-              </button>
-            );
-          })}
+                {group.title}
+              </div>
+              {group.items.map((g) => {
+                const isActive = g.id === id;
+                return (
+                  <button
+                    key={g.id}
+                    ref={isActive ? activeRef : undefined}
+                    onClick={() => {
+                      set(g.id);
+                      setOpen(false);
+                    }}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px 14px",
+                      background: isActive ? "#2d2d2a" : "transparent",
+                      color: isActive ? "#fff" : "#bbb",
+                      border: "none",
+                      borderLeft: isActive
+                        ? "3px solid #e96a3a"
+                        : "3px solid transparent",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{g.name}</div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: isActive ? "#aaa" : "#666",
+                        marginTop: 2,
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {g.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
