@@ -125,8 +125,8 @@ export default function App() {
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#bbb", padding: "10px 14px 4px" }}>
           BASE
         </div>
-        <GeneratorPicker />
         <MotifPanel />
+        <GeneratorPicker />
         <LayerStack />
         <div style={{ flex: 1 }} />
         <footer
