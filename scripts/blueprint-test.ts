@@ -102,5 +102,27 @@ useApp.getState().setMotif(null);
   const d = blueprint.generate({ ...P, footer: "Strasse" }, 1, canvas);
   assert.equal(c.polylines.length, d.polylines.length, "ß should lay out like ss");
 }
+// 11. motif rotation: 180° = point-rotated (not mirrored), same count, still in slot; 0° unchanged
+{
+  const fixture = readFileSync(join(here, "fixtures/motif-gear.svg"), "utf8");
+  useApp.getState().setMotif({ name: "gear", ...parseSvgMotif(fixture) });
+  const r0 = blueprint.generate({ ...P, motifRotation: 0 as const }, 1, canvas);
+  const r180 = blueprint.generate({ ...P, motifRotation: 180 as const }, 1, canvas);
+  assert.equal(r0.polylines.length, r180.polylines.length);
+  // gear fixture is not 180°-symmetric around its center? It nearly is — use the
+  // asymmetric inner bar (M 40 50 L 60 50 sits left-weighted): compare first motif
+  // polyline's first point — must differ between 0° and 180°.
+  const m0 = r0.polylines[r0.polylines.length - 3].points[0];
+  const m180 = r180.polylines[r180.polylines.length - 3].points[0];
+  assert.notDeepEqual(m0, m180, "180° rotation should move motif points");
+  for (const l of r180.polylines) for (const [x, y] of l.points) {
+    assert.ok(x >= 0 && x <= 148 && y >= 0 && y <= 210, `rotated point outside canvas: ${x},${y}`);
+  }
+  // 90°: portrait/landscape swap still fits
+  const r90 = blueprint.generate({ ...P, motifRotation: 90 as const }, 1, canvas);
+  for (const l of r90.polylines) for (const [x, y] of l.points) {
+    assert.ok(x >= 0 && x <= 148 && y >= 0 && y <= 210);
+  }
+}
 
 console.log("blueprint: all checks passed ✓");

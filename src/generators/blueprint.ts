@@ -23,6 +23,8 @@ type Params = {
   frameInsetMm: number;
   cornerMarks: boolean;
   motifScale: number;
+  /** Rotate the imported motif before fitting (degrees, exact quarter turns). */
+  motifRotation: 0 | 90 | 180 | 270;
   accentTarget: "none" | "frame" | "meta";
   accentColor: string;
 };
@@ -41,6 +43,7 @@ const DEFAULTS: Params = {
   frameInsetMm: 8,
   cornerMarks: false,
   motifScale: 0.8,
+  motifRotation: 0,
   accentTarget: "none",
   accentColor: "#1a3a52",
 };
@@ -115,6 +118,7 @@ export const blueprint: GeneratorDef<Params> = {
     frameInsetMm: { value: DEFAULTS.frameInsetMm, min: 3, max: 25, step: 0.5 },
     cornerMarks: { value: DEFAULTS.cornerMarks },
     motifScale: { value: DEFAULTS.motifScale, min: 0.3, max: 1, step: 0.05 },
+    motifRotation: { value: DEFAULTS.motifRotation, options: [0, 90, 180, 270] },
     accentTarget: { value: DEFAULTS.accentTarget, options: ["none", "frame", "meta"] },
     accentColor: { value: DEFAULTS.accentColor, render: (get) => get("Blueprint.accentTarget") !== "none" },
   },
@@ -237,7 +241,17 @@ export const blueprint: GeneratorDef<Params> = {
     const my = top + (slotH - mh) / 2;
     const motif = useApp.getState().motif;
     if (motif && motif.polylines.length > 0) {
-      out.push(...translate(fitToCanvas(motif.polylines, mw, mh, 0), mx, my));
+      // Exact quarter-turn rotation (no trig — keeps coordinates bit-exact);
+      // fitToCanvas re-fits and re-centers the rotated bounds afterwards.
+      const ROT: Record<number, (pt: Point) => Point> = {
+        0: ([x, y]) => [x, y],
+        90: ([x, y]) => [-y, x],
+        180: ([x, y]) => [-x, -y],
+        270: ([x, y]) => [y, -x],
+      };
+      const rot = ROT[p.motifRotation] ?? ROT[0];
+      const rotated = motif.polylines.map((l) => ({ ...l, points: l.points.map(rot) }));
+      out.push(...translate(fitToCanvas(rotated, mw, mh, 0), mx, my));
     } else {
       // Placeholder: slot box + diagonals, so the layout stays tunable.
       out.push({ closed: true, points: [[mx, my], [mx + mw, my], [mx + mw, my + mh], [mx, my + mh]] });
