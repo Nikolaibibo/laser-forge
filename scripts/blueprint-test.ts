@@ -67,7 +67,7 @@ useApp.getState().setMotif(null);
 {
   useApp.getState().setMotif(null);
   const art = blueprint.generate(
-    { ...P, header: "TIMEPIECE", subtitle: "Manual-Wind Chronograph", meta: "27mm . 17 Jewels", footer: "PLOTTED 2026", titleHeightMm: 20, frameInsetMm: 25 },
+    { ...P, header: "TIMEPIECE", subtitle: "Manual-Wind Chronograph", meta: "27mm . 17 Jewels", footer: "PLOTTED 2026", titleSize: 10, frameInsetMm: 25 },
     1,
     { wMm: 80, hMm: 80 },
   );

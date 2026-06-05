@@ -17,8 +17,9 @@ type Params = {
   footer: string;
   titleFont: HersheyFontId;
   metaFont: HersheyFontId;
-  titleHeightMm: number;
-  metaHeightMm: number;
+  /** Cap heights as % of canvas height — typography scales with the paper format. */
+  titleSize: number;
+  metaSize: number;
   frameInsetMm: number;
   cornerMarks: boolean;
   motifScale: number;
@@ -35,8 +36,8 @@ const DEFAULTS: Params = {
   footer: "",
   titleFont: "serif",
   metaFont: "simplex",
-  titleHeightMm: 8,
-  metaHeightMm: 3,
+  titleSize: 3.8, // ≈8mm on A5 — calibrated against the original mm defaults
+  metaSize: 1.4,  // ≈3mm on A5
   frameInsetMm: 8,
   cornerMarks: false,
   motifScale: 0.8,
@@ -109,8 +110,8 @@ export const blueprint: GeneratorDef<Params> = {
     footer: { value: DEFAULTS.footer },
     titleFont: { value: DEFAULTS.titleFont, options: FONT_IDS },
     metaFont: { value: DEFAULTS.metaFont, options: FONT_IDS },
-    titleHeightMm: { value: DEFAULTS.titleHeightMm, min: 3, max: 20, step: 0.5 },
-    metaHeightMm: { value: DEFAULTS.metaHeightMm, min: 1.5, max: 8, step: 0.25 },
+    titleSize: { value: DEFAULTS.titleSize, min: 1.5, max: 10, step: 0.1 },
+    metaSize: { value: DEFAULTS.metaSize, min: 0.5, max: 4, step: 0.05 },
     frameInsetMm: { value: DEFAULTS.frameInsetMm, min: 3, max: 25, step: 0.5 },
     cornerMarks: { value: DEFAULTS.cornerMarks },
     motifScale: { value: DEFAULTS.motifScale, min: 0.3, max: 1, step: 0.05 },
@@ -161,15 +162,18 @@ export const blueprint: GeneratorDef<Params> = {
     // Build all text blocks and gaps at scale s (1 = requested sizes).
     // Width-clamping inside block() can only make blocks shorter than linear,
     // so a single pass with the computed s is sufficient to fit the stack.
+    // Type sizes are % of canvas height — typography stays proportional across formats.
+    const titleMm = (p.titleSize / 100) * canvas.hMm;
+    const metaMm = (p.metaSize / 100) * canvas.hMm;
     const buildBlocks = (s: number) => {
-      const gap = p.metaHeightMm * 0.9 * s;
+      const gap = metaMm * 0.9 * s;
       // gap above title scales with title size (visual weight), unlike the meta-driven inter-slot gap
-      const titleGap = p.titleHeightMm * 0.8 * s;
-      const header   = block(p.header.toUpperCase(), p.metaFont, p.metaHeightMm * s, maxW);
-      const title    = block(p.title.toUpperCase(), p.titleFont, p.titleHeightMm * s, maxW);
-      const subtitle = block(p.subtitle, p.metaFont, p.metaHeightMm * 1.1 * s, maxW);
-      const meta     = block(p.meta, p.metaFont, p.metaHeightMm * s, maxW, accent("meta"));
-      const footer   = block(p.footer, p.metaFont, p.metaHeightMm * 0.8 * s, maxW);
+      const titleGap = titleMm * 0.8 * s;
+      const header   = block(p.header.toUpperCase(), p.metaFont, metaMm * s, maxW);
+      const title    = block(p.title.toUpperCase(), p.titleFont, titleMm * s, maxW);
+      const subtitle = block(p.subtitle, p.metaFont, metaMm * 1.1 * s, maxW);
+      const meta     = block(p.meta, p.metaFont, metaMm * s, maxW, accent("meta"));
+      const footer   = block(p.footer, p.metaFont, metaMm * 0.8 * s, maxW);
       return { gap, titleGap, header, title, subtitle, meta, footer };
     };
 
