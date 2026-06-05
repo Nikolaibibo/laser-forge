@@ -25,6 +25,16 @@ const FONTS: Record<HersheyFontId, Record<number, HersheyGlyph>> = {
 /** Hershey line height in font units (cap −12 … baseline 9, plus leading). */
 const LINE_H = 32;
 
+/** Hershey JHF covers ASCII 32–127 only. German umlauts are synthesized from the
+ *  base glyph plus two diaeresis dashes; ß is expanded to "ss" before layout. */
+const UMLAUTS: Record<string, { base: string; upper: boolean }> = {
+  "ä": { base: "a", upper: false }, "ö": { base: "o", upper: false }, "ü": { base: "u", upper: false },
+  "Ä": { base: "A", upper: true }, "Ö": { base: "O", upper: true }, "Ü": { base: "U", upper: true },
+};
+const DIAERESIS_Y = { lower: -8, upper: -15 }; // above x-height / above cap, font units (y down)
+const DIAERESIS_DX = 2.2;   // dot offset from glyph center
+const DIAERESIS_LEN = 1.4;  // dash length — a "dot" a pen can actually draw
+
 export type LaidStroke = {
   points: Point[];
   letterIdx: number;
@@ -44,10 +54,11 @@ export function layoutTextStrokes(
   const out: LaidStroke[] = [];
   let letterIdx = 0;
   let wordIdx = 0;
-  String(textStr).split("\n").forEach((line, lineIdx) => {
+  String(textStr).replace(/ß/g, "ss").split("\n").forEach((line, lineIdx) => {
     const yOff = lineIdx * LINE_H * lineSpacing;
     const chars = [...line];
-    const glyphs = chars.map((ch) => glyphSet[ch.charCodeAt(0)] ?? glyphSet[32]);
+    const glyphs = chars.map((ch) =>
+      glyphSet[(UMLAUTS[ch]?.base ?? ch).charCodeAt(0)] ?? glyphSet[32]);
     let width = 0;
     for (const g of glyphs) width += g.right - g.left + letterSpacing;
     let cursor = -width / 2;
@@ -60,6 +71,18 @@ export function layoutTextStrokes(
           points: stroke.map(([x, y]): Point => [x + xOff, y + yOff]),
           letterIdx, wordIdx, lineIdx,
         });
+      }
+      const u = UMLAUTS[ch];
+      if (u) {
+        // two diaeresis dashes above the base glyph, sharing the letter's indices
+        const cx = cursor + (g.right - g.left) / 2;
+        const dotY = (u.upper ? DIAERESIS_Y.upper : DIAERESIS_Y.lower) + yOff;
+        for (const dx of [-DIAERESIS_DX, DIAERESIS_DX]) {
+          out.push({
+            points: [[cx + dx - DIAERESIS_LEN / 2, dotY], [cx + dx + DIAERESIS_LEN / 2, dotY]],
+            letterIdx, wordIdx, lineIdx,
+          });
+        }
       }
       cursor += g.right - g.left + letterSpacing;
       letterIdx++;

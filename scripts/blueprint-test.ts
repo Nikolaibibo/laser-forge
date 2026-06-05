@@ -93,5 +93,14 @@ useApp.getState().setMotif(null);
     assert.ok(x >= 0 && x <= 148 && y >= 0 && y <= 210);
   }
 }
+// 10. umlauts synthesized (Ö = O + 2 diaeresis dashes), ß expands to ss
+{
+  const a = blueprint.generate({ ...P, footer: "BORNSEN" }, 1, canvas);
+  const b = blueprint.generate({ ...P, footer: "BÖRNSEN" }, 1, canvas);
+  assert.equal(b.polylines.length - a.polylines.length, 2, "Ö should add exactly 2 dash strokes");
+  const c = blueprint.generate({ ...P, footer: "Straße" }, 1, canvas);
+  const d = blueprint.generate({ ...P, footer: "Strasse" }, 1, canvas);
+  assert.equal(c.polylines.length, d.polylines.length, "ß should lay out like ss");
+}
 
 console.log("blueprint: all checks passed ✓");
