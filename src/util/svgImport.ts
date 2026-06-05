@@ -16,7 +16,8 @@ const num = (s: string): number => {
 };
 
 const mm = (s: string): number => {
-  const unit = s.match(/(px|pt|cm|in)\s*$/i);
+  if (/cm\s*$/i.test(s)) return num(s.replace(/cm\s*$/i, "")) * 10; // exact, vpype can emit cm
+  const unit = s.match(/(px|pt|in)\s*$/i);
   if (unit) throw new Error(`SVG width/height in "${unit[1]}" — re-export in mm (vpype writes mm)`);
   return num(s.replace(/mm\s*$/i, ""));
 };

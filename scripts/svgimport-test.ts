@@ -62,11 +62,18 @@ assert.throws(() => parseSvgMotif("<html></html>"), /not an SVG/);
   const r = parseSvgMotif(wrap('<path d="M 50 20 L 50 30"/>', 'width="100mm" height="50mm" viewBox="50 20 100 50"'));
   assert.deepEqual(r.polylines[0].points, [[0, 0], [0, 10]]);
 }
-// 13. unit suffix px/cm on width/height → actionable error; single-quoted attrs work; negative-exponent translate works
+// 13. unit suffix px on width/height → actionable error; single-quoted attrs work; negative-exponent translate works
 assert.throws(() => parseSvgMotif(wrap('<path d="M 0 0 L 1 1"/>', 'width="100px" height="50px" viewBox="0 0 100 50"')), /re-export in mm/);
 {
   const r = parseSvgMotif(wrap("<g transform='translate(1e-2,0)'><path d='M 0 0 L 1 0'/></g>"));
   assert.deepEqual(r.polylines[0].points, [[0.01, 0], [1.01, 0]]);
 }
+// 14. cm units convert exactly (×10) and viewBox scale follows (vpype emits cm for larger docs)
+{
+  const r = parseSvgMotif(wrap('<path d="M 0 0 L 200 100"/>', 'width="10cm" height="5cm" viewBox="0 0 200 100"'));
+  assert.equal(r.widthMm, 100);
+  assert.equal(r.heightMm, 50);
+  assert.deepEqual(r.polylines[0].points, [[0, 0], [100, 50]]);
+}
 
-console.log("svgImport: all checks passed ✓ (13)");
+console.log("svgImport: all checks passed ✓ (14)");
