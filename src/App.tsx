@@ -112,6 +112,7 @@ export default function App() {
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
+          position: "relative",
         }}
       >
         <header style={{ padding: "16px 14px", borderBottom: "1px solid #2d2d2a" }}>
@@ -122,11 +123,8 @@ export default function App() {
             Generative vector workbench
           </div>
         </header>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#bbb", padding: "10px 14px 4px" }}>
-          BASE
-        </div>
-        <MotifPanel />
         <GeneratorPicker />
+        <MotifPanel />
         <LayerStack />
         <div style={{ flex: 1 }} />
         <footer
