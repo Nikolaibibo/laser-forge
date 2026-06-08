@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApp } from "../state/store";
 import { downloadSvg } from "../render/svgExport";
+import { downloadGcode } from "../plotter/gcode";
 import type { Artwork } from "../generators/types";
 import { writeHash, type SharePayload } from "../state/urlSync";
 
@@ -136,6 +137,13 @@ export function ExportBar({ artwork, currentParams }: Props) {
         style={{ ...btnStyle, background: "#e96a3a", color: "#fff" }}
       >
         ⬇ SVG
+      </button>
+      <button
+        title="GRBL-G-code (M3 S20 up / M3 S160 down) zum Laden in CNC.js."
+        onClick={() => downloadGcode(artwork, `${generatorId}-${seed}.gcode`, { dedupe, join })}
+        style={{ ...btnStyle, background: "#3a7ae9", color: "#fff" }}
+      >
+        ⬇ G-code
       </button>
     </div>
   );

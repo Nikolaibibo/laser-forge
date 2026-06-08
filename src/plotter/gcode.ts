@@ -1,4 +1,6 @@
 import type { Artwork, Polyline } from "../generators/types";
+import { dedupePaths } from "../util/dedupePaths";
+import { mergePaths } from "../util/mergePaths";
 
 export type PenOpts = {
   feed: number;      // mm/min draw feed
@@ -147,6 +149,44 @@ export function artworkToGcode(art: Artwork, opts: PenOpts = DEFAULT_PEN): strin
   lines.push("G0 X0 Y0");
 
   return lines;
+}
+
+export type GcodeExportOptions = {
+  /** Remove duplicate/overlapping segments so the pen doesn't redraw them. */
+  dedupe?: boolean;
+  /** Join open polylines whose endpoints coincide → fewer pen lifts. */
+  join?: boolean;
+  /** Pen/feed options. Defaults to DEFAULT_PEN (M3 S20 up / M3 S160 down). */
+  pen?: PenOpts;
+};
+
+/**
+ * Serialize an Artwork to a complete GRBL G-code program string.
+ * Mirrors the SVG export pre-processing (dedupe/join) so a downloaded file
+ * matches what gets streamed via Web Serial.
+ */
+export function gcodeExport(art: Artwork, opts: GcodeExportOptions = {}): string {
+  let polylines = opts.dedupe ? dedupePaths(art.polylines) : art.polylines;
+  if (opts.join) polylines = mergePaths(polylines);
+  const lines = artworkToGcode({ ...art, polylines }, opts.pen ?? DEFAULT_PEN);
+  return lines.join("\n") + "\n";
+}
+
+/** Trigger a browser download of the artwork as a .gcode file. */
+export function downloadGcode(
+  art: Artwork,
+  filename = "laser-forge.gcode",
+  opts: GcodeExportOptions = {},
+): void {
+  const blob = new Blob([gcodeExport(art, opts)], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 /**
