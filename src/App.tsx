@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Leva } from "leva";
 import { useApp } from "./state/store";
 import { byId } from "./generators/registry";
@@ -12,7 +12,47 @@ import { LayerControls } from "./ui/LayerControls";
 import { readHash } from "./state/urlSync";
 import type { Artwork } from "./generators/types";
 import { PlotterPanel } from "./ui/PlotterPanel";
+import { AxiDrawPanel } from "./ui/AxiDrawPanel";
 import { MotifPanel } from "./ui/MotifPanel";
+
+type Machine = "grbl" | "axidraw";
+
+/** GRBL (WebSerial) ↔ AxiDraw (local bridge) selector; both coexist. */
+function MachineDock() {
+  const [machine, setMachine] = useState<Machine>("grbl");
+  const tab = (m: Machine): React.CSSProperties => ({
+    padding: "4px 12px",
+    fontSize: 12,
+    cursor: "pointer",
+    background: machine === m ? "#2d2d2a" : "transparent",
+    color: machine === m ? "#fff" : "#999",
+    border: "1px solid #2d2d2a",
+    borderBottom: "none",
+    borderRadius: "4px 4px 0 0",
+    fontFamily: "inherit",
+  });
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          padding: "6px 12px 0",
+          background: "#141413",
+          borderTop: "1px solid #2d2d2a",
+        }}
+      >
+        <button style={tab("grbl")} onClick={() => setMachine("grbl")}>
+          GRBL / Laser
+        </button>
+        <button style={tab("axidraw")} onClick={() => setMachine("axidraw")}>
+          AxiDraw
+        </button>
+      </div>
+      {machine === "grbl" ? <PlotterPanel /> : <AxiDrawPanel />}
+    </div>
+  );
+}
 
 // Hash layer UID to a stable per-layer seed offset so each layer is deterministic.
 const hashUid = (uid: string): number => {
@@ -150,7 +190,7 @@ export default function App() {
         }}
       >
         <Stage key={generatorId} generatorId={generatorId} />
-        <PlotterPanel />
+        <MachineDock />
       </main>
 
       <aside

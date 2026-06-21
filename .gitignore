@@ -5,3 +5,7 @@ dist
 .vite
 .firebase/
 tsconfig.tsbuildinfo
+
+# Python bridge
+__pycache__/
+*.pyc
