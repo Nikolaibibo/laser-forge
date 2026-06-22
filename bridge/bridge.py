@@ -85,6 +85,16 @@ PROFILES = {
         "--speed_pendown", "40", "--speed_penup", "110", "--accel", "40",
         "--pen_delay_down", "120", "--pen_delay_up", "120", "--pen_rate_lower", "40",
     ],
+    # white gel fineliner on thick black card — wet ink that needs flow time and
+    # a gentle landing: slow draw (even coverage / opacity, no skipping), long
+    # pen_delay_down so ink starts before the carriage moves (no missing line
+    # starts), slow pen_rate_lower so the tip doesn't slam the raised card.
+    # Pen-down PRESSURE on thick stock is set by the clamp height, not here —
+    # the full hub (pen_pos_down=100) stays mandatory on this clone.
+    "gel": [
+        "--speed_pendown", "22", "--speed_penup", "110", "--accel", "30",
+        "--pen_delay_down", "200", "--pen_delay_up", "150", "--pen_rate_lower", "30",
+    ],
 }
 
 

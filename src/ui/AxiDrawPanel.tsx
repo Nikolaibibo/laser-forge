@@ -140,6 +140,7 @@ export function AxiDrawPanel() {
           <select value={profile} onChange={(e) => setProfile(e.target.value as PenProfile)}>
             <option value="pencil">Bleistift</option>
             <option value="felt">Filzstift</option>
+            <option value="gel">Gel (weiß/schwarz)</option>
           </select>
         </label>
       </div>

@@ -8,7 +8,7 @@
 // dev/preview instance (npm run dev) — a HTTPS Firebase page can't reach it
 // (mixed content), same constraint WebSerial had.
 
-export type PenProfile = "pencil" | "felt";
+export type PenProfile = "pencil" | "felt" | "gel";
 
 export type BridgeStatus = {
   ok: boolean;
