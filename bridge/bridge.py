@@ -210,18 +210,34 @@ def run_axicli(args: list[str], timeout: int = 120) -> tuple[bool, str]:
 
 
 def set_zero() -> tuple[bool, str]:
-    """Set current position as 0,0 via raw EBB 'CS' command (like plot.sh)."""
+    """Set current position as 0,0 via the EBB 'CS' (Clear Step) command.
+
+    The naive version sent 'CS\\r' right after opening the port and read a line.
+    The EBB then reported `Unknown command` because stale bytes (left in the OS
+    buffer by the CardListener port-grab / USB enumeration) were prepended to our
+    command, and readline() waited for a '\\n' the EBB may not send. We now flush
+    both buffers after opening, write CS, and read whatever comes back, treating
+    an explicit 'OK' (or a clean empty reply) as success and anything containing
+    'Err'/'Unknown' as failure — so a botched zero no longer reports success."""
     free_port()
     try:
         import serial  # pyserial, in the venv alongside pyaxidraw
 
         s = serial.Serial(resolve_port(), 9600, timeout=2)
-        threading.Event().wait(0.3)
-        s.write(b"CS\r")
-        threading.Event().wait(0.2)
-        resp = s.readline().decode(errors="replace").strip()
-        s.close()
-        return True, f"0,0 set: {resp}"
+        try:
+            threading.Event().wait(0.3)
+            s.reset_input_buffer()
+            s.reset_output_buffer()
+            s.write(b"CS\r")
+            s.flush()
+            threading.Event().wait(0.3)
+            raw = s.read(s.in_waiting or 32)
+        finally:
+            s.close()
+        resp = raw.decode(errors="replace").strip()
+        bad = ("err" in resp.lower()) or ("unknown" in resp.lower())
+        ok = not bad  # EBB replies "OK"; a clean empty read is also acceptable
+        return ok, (f"0,0 set: {resp}" if ok else f"CS rejected by EBB: {resp}")
     except Exception as e:  # noqa: BLE001
         return False, str(e)
 
