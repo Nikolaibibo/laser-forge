@@ -149,7 +149,14 @@ def prep_svg(raw: str, scale: float = SCALE) -> str:
         H = vbh
     sx, sy = W / vbw, H / vbh  # viewBox units -> mm
 
+    root_open = raw[raw.index("<svg"): raw.index(">", raw.index("<svg"))]
     inner = raw[raw.index(">", raw.index("<svg")) + 1: raw.rindex("</svg>")]
+    # Drop <metadata> — vpype/Inkscape emit an rdf:/cc:/dc: block there.
+    inner = re.sub(r"<metadata\b.*?</metadata>", "", inner, flags=re.DOTALL)
+    # Carry over every xmlns:* prefix the source declared (inkscape:, sodipodi:,
+    # xlink:, …) so the geometry's prefixed attributes resolve under our minimal
+    # wrapper <svg> instead of tripping lxml's "undefined prefix" error.
+    ns = " ".join(re.findall(r'xmlns:[\w.-]+="[^"]*"', root_open))
     g = (
         f'<g transform="translate({H},0) rotate(90) scale({sx},{sy})" '
         f'fill="none" stroke="black" stroke-width="0.3" '
@@ -157,7 +164,7 @@ def prep_svg(raw: str, scale: float = SCALE) -> str:
     )
     ow, oh = H * scale, W * scale  # rotated output canvas, scaled
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{ow:.4f}mm" '
+        f'<svg xmlns="http://www.w3.org/2000/svg" {ns} width="{ow:.4f}mm" '
         f'height="{oh:.4f}mm" viewBox="0 0 {H} {W}">\n{g}\n{inner}\n</g>\n</svg>'
     )
 
@@ -170,16 +177,19 @@ PLOT_PROC: "subprocess.Popen | None" = None
 
 
 def free_port() -> None:
-    """tomedo's CardListenerStandalone grabs the serial port — kill it."""
+    """tomedo's CardListenerStandalone grabs the serial port — kill it.
+
+    Unconditional pkill: lsof frequently can't see the holder (no perms, or it
+    grabs the /dev/tty.* twin of the /dev/cu.* device), so gating the kill on
+    detecting it first silently skipped it and left the port held. pkill is a
+    cheap no-op when the process isn't running. The settle wait lets the port
+    release before axicli connects; axicli then holds it for the whole plot, so
+    a tomedo respawn can't re-grab mid-plot."""
     try:
-        out = subprocess.run(
-            ["lsof", tty_of(resolve_port())], capture_output=True, text=True, timeout=5
-        ).stdout
-        if "CardListener" in out:
-            subprocess.run(["pkill", "-f", "CardListenerStandalone"], timeout=5)
-            threading.Event().wait(1.0)
+        subprocess.run(["pkill", "-f", "CardListenerStandalone"], timeout=5)
+        threading.Event().wait(1.0)
     except Exception:
-        pass  # lsof/pkill missing or nothing to kill — non-fatal
+        pass  # pkill missing or nothing to kill — non-fatal
 
 
 def run_axicli(args: list[str], timeout: int = 120) -> tuple[bool, str]:

@@ -95,6 +95,29 @@ print("prep_svg — bare px units")
 check("px→mm: output width = 25.4 × scale", num("width", out5) == round(25.4 * SCALE, 4),
       f"got {num('width', out5)} want {25.4 * SCALE}")
 
+# vpype/Inkscape emit a <metadata> block with rdf:/cc: prefixes — must be
+# stripped, else the minimal wrapper <svg> has undefined namespace prefixes.
+META = (
+    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:rdf="x" '
+    'xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" '
+    'width="40mm" height="40mm" viewBox="0 0 40 40">\n'
+    "  <metadata><rdf:RDF><cc:Work>junk</cc:Work></rdf:RDF></metadata>\n"
+    '  <defs/>\n  <g inkscape:groupmode="layer" inkscape:label="1">'
+    '<path d="M 0,0 L 40,0"/></g>\n</svg>'
+)
+out6 = prep_svg(META)
+print("prep_svg — metadata + inkscape-prefixed geometry")
+check("metadata block removed", "<metadata" not in out6 and "rdf:RDF" not in out6, out6[:200])
+check("geometry kept", "M 0,0 L 40,0" in out6, out6[:200])
+check("inkscape ns carried to wrapper", "xmlns:inkscape" in out6, out6[:200])
+# The whole point: result must parse under a strict XML parser (= what axicli does).
+try:
+    import xml.dom.minidom as _md
+    _md.parseString(out6)
+    check("prepped output is valid XML", True)
+except Exception as e:  # noqa: BLE001
+    check("prepped output is valid XML", False, str(e))
+
 if FAILS:
     print(f"\n{FAILS} test(s) failed")
     sys.exit(1)
