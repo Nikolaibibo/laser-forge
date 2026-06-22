@@ -125,9 +125,16 @@ ALLOWED_ORIGINS = {
 # (home = front-left corner, +X = away, +Y = right), and scaled ×SCALE.
 # ---------------------------------------------------------------------------
 def prep_svg(raw: str, scale: float = SCALE) -> str:
+    # Convert any SVG length unit to mm. A bare number is CSS px per the SVG
+    # spec (96 px = 1 in). Without this, a cm-authored file (e.g. the Caliber
+    # movement SVGs, or vpype's default cm output) would plot 10× too small.
+    UNIT_MM = {"mm": 1.0, "cm": 10.0, "in": 25.4, "px": 25.4 / 96.0}
+
     def getnum(attr: str):
         m = re.search(rf'{attr}\s*=\s*"([\d.]+)\s*(mm|cm|in|px)?"', raw)
-        return float(m.group(1)) if m else None
+        if not m:
+            return None
+        return float(m.group(1)) * UNIT_MM[m.group(2) or "px"]
 
     W, H = getnum("width"), getnum("height")
     vb = re.search(r'viewBox\s*=\s*"([-\d.\s]+)"', raw)

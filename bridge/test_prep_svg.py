@@ -71,6 +71,30 @@ out3 = prep_svg(SCALED)
 print("prep_svg — viewBox≠mm")
 check("inner scale = mm/vb = 0.5", "scale(0.5,0.5)" in out3, out3[:160])
 
+# cm units must be read as mm×10 (Caliber SVGs + vpype default output are cm).
+CM = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="8.2cm" height="6.2cm" '
+    'viewBox="0 0 309.92 234.33"><path d="M 0,0 L 309.92,0"/></svg>'
+)
+out4 = prep_svg(CM)
+print("prep_svg — cm units")
+# 8.2cm = 82mm wide → rotated output width = H = 62mm × scale
+check("cm→mm: output width = 62 × scale", num("width", out4) == round(62.0 * SCALE, 4),
+      f"got {num('width', out4)} want {62.0 * SCALE}")
+# inner scale = 82mm / 309.92 vb ≈ 0.2646 (NOT 8.2/309.92 ≈ 0.0265)
+check("cm→mm: inner scale ≈ 0.2646", "scale(0.2645" in out4, out4[:200])
+
+# A bare-number width is px → mm via 96 dpi (1in = 25.4mm).
+PX = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" '
+    'viewBox="0 0 96 96"><path d="M 0,0 L 96,0"/></svg>'
+)
+out5 = prep_svg(PX)
+print("prep_svg — bare px units")
+# 96px = 25.4mm → rotated output width = 25.4mm × scale
+check("px→mm: output width = 25.4 × scale", num("width", out5) == round(25.4 * SCALE, 4),
+      f"got {num('width', out5)} want {25.4 * SCALE}")
+
 if FAILS:
     print(f"\n{FAILS} test(s) failed")
     sys.exit(1)
