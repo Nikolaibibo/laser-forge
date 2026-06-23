@@ -16,10 +16,12 @@ import { folds } from "./folds";
 import { text } from "./text";
 import { blueprint } from "./blueprint";
 import { patternMaker } from "./patternMaker";
+import { svg } from "./svg";
 
 /** Picker grouping: pen-plotter generators first (current focus), laser-era second. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATOR_GROUPS: { title: string; items: GeneratorDef<any>[] }[] = [
+  { title: "Import", items: [svg] },
   { title: "Pen Plotter", items: [pipes, ribbons, loops, folds, text] },
   { title: "Pattern", items: [patternMaker] },
   { title: "Layout", items: [blueprint] },

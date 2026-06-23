@@ -6,7 +6,7 @@ import { useApp } from "../state/store";
 import { parseSvgMotif } from "../util/svgImport";
 
 /** Generators that read the imported motif from the store. */
-const MOTIF_CONSUMERS = new Set(["blueprint", "pattern-maker"]);
+const MOTIF_CONSUMERS = new Set(["blueprint", "pattern-maker", "svg"]);
 
 const btnStyle: CSSProperties = {
   background: "var(--bg-card)",
