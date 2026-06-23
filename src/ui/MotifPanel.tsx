@@ -1,18 +1,22 @@
-// src/ui/MotifPanel.tsx — SVG motif upload for the blueprint generator.
-// Renders only while the blueprint generator is active. Parse errors keep the
+// src/ui/MotifPanel.tsx — SVG motif upload for the motif-consuming generators.
+// Renders only while one of those generators is active. Parse errors keep the
 // previous motif loaded (per spec).
 import { useRef, useState, type CSSProperties } from "react";
 import { useApp } from "../state/store";
 import { parseSvgMotif } from "../util/svgImport";
 
+/** Generators that read the imported motif from the store. */
+const MOTIF_CONSUMERS = new Set(["blueprint", "pattern-maker"]);
+
 const btnStyle: CSSProperties = {
-  background: "#1d1d1b",
-  border: "1px solid #2d2d2a",
+  background: "var(--bg-card)",
+  border: "1px solid var(--border-color)",
   borderRadius: 4,
-  color: "#eee",
+  color: "var(--text-primary)",
   cursor: "pointer",
   fontSize: 11,
-  padding: "4px 10px",
+  padding: "5px 12px",
+  transition: "all 0.15s ease",
 };
 
 export function MotifPanel() {
@@ -22,7 +26,7 @@ export function MotifPanel() {
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  if (generatorId !== "blueprint") return null;
+  if (!MOTIF_CONSUMERS.has(generatorId)) return null;
 
   const onFile = (f: File | undefined) => {
     if (!f) return;
@@ -37,8 +41,8 @@ export function MotifPanel() {
   };
 
   return (
-    <div style={{ padding: "10px 14px", borderBottom: "1px solid #2d2d2a", fontSize: 12 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#bbb", marginBottom: 6 }}>
+    <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border-color)", fontSize: 12 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 6 }}>
         MOTIF
       </div>
       <input
@@ -51,20 +55,20 @@ export function MotifPanel() {
           e.target.value = ""; // re-selecting the same file fires onChange again
         }}
       />
-      <button style={btnStyle} onClick={() => fileRef.current?.click()}>
+      <button style={btnStyle} onClick={() => fileRef.current?.click()} className="transition-all-fast">
         Load SVG…
       </button>
       {motif && (
-        <div style={{ marginTop: 6, color: "#9ab89a", display: "flex", justifyContent: "space-between", gap: 8 }}>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ marginTop: 8, color: "#95b895", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 11 }}>
             {motif.name} ({motif.polylines.length} paths)
           </span>
-          <button style={{ ...btnStyle, padding: "0 6px" }} onClick={() => setMotif(null)} title="Clear motif">
+          <button style={{ ...btnStyle, padding: "2px 6px", fontSize: 10 }} onClick={() => setMotif(null)} title="Clear motif">
             ✕
           </button>
         </div>
       )}
-      {error && <div style={{ marginTop: 6, color: "#e0584f" }}>{error}</div>}
+      {error && <div style={{ marginTop: 8, color: "#e0584f", fontSize: 11 }}>{error}</div>}
     </div>
   );
 }

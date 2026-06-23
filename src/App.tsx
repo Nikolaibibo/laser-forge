@@ -21,25 +21,27 @@ type Machine = "grbl" | "axidraw";
 function MachineDock() {
   const [machine, setMachine] = useState<Machine>("grbl");
   const tab = (m: Machine): React.CSSProperties => ({
-    padding: "4px 12px",
-    fontSize: 12,
+    padding: "6px 14px",
+    fontSize: 11,
+    fontWeight: 600,
     cursor: "pointer",
-    background: machine === m ? "#2d2d2a" : "transparent",
-    color: machine === m ? "#fff" : "#999",
-    border: "1px solid #2d2d2a",
+    background: machine === m ? "var(--bg-hover)" : "transparent",
+    color: machine === m ? "var(--text-primary)" : "var(--text-secondary)",
+    border: "1px solid var(--border-color)",
     borderBottom: "none",
     borderRadius: "4px 4px 0 0",
     fontFamily: "inherit",
+    transition: "all 0.15s ease",
   });
   return (
-    <div>
+    <div style={{ background: "var(--bg-sidebar)", borderTop: "1px solid var(--border-color)" }}>
       <div
         style={{
           display: "flex",
           gap: 4,
-          padding: "6px 12px 0",
-          background: "#141413",
-          borderTop: "1px solid #2d2d2a",
+          padding: "8px 12px 0",
+          background: "rgba(0, 0, 0, 0.15)",
+          borderBottom: "1px solid var(--border-color)",
         }}
       >
         <button style={tab("grbl")} onClick={() => setMachine("grbl")}>
@@ -99,19 +101,26 @@ function Stage({ generatorId }: { generatorId: string }) {
   }, [finalArt, setCurrentArtwork]);
 
   return (
-    <>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", minHeight: 0 }}>
       {layers.map((l, i) => (
         <LayerControls key={l.uid} layer={l} index={i} />
       ))}
       <CanvasPreview artwork={finalArt} />
       <ExportBar artwork={finalArt} currentParams={baseParams as Record<string, unknown>} />
-    </>
+    </div>
   );
 }
 
 export default function App() {
   const generatorId = useApp((s) => s.generatorId);
   const hydrate = useApp((s) => s.hydrate);
+
+  // Get Zustand values for global header inputs
+  const w = useApp((s) => s.canvasWMm);
+  const h = useApp((s) => s.canvasHMm);
+  const setCanvas = useApp((s) => s.setCanvas);
+  const penWidthMm = useApp((s) => s.penWidthMm);
+  const setPenWidthMm = useApp((s) => s.setPenWidthMm);
 
   useEffect(() => {
     const h = readHash();
@@ -133,36 +142,111 @@ export default function App() {
       style={{
         display: "grid",
         gridTemplateColumns: "280px 1fr 320px",
-        gridTemplateRows: "1fr auto",
+        gridTemplateRows: "56px 1fr",
         height: "100vh",
         width: "100vw",
-        background: "#0c0c0b",
-        color: "#eee",
-        fontFamily:
-          "system-ui, -apple-system, 'Inter', 'Segoe UI', sans-serif",
+        background: "var(--bg-base)",
+        color: "var(--text-primary)",
+        fontFamily: "var(--font-sans)",
         overflow: "hidden",
       }}
     >
+      {/* Global Header Bar */}
+      <header
+        style={{
+          gridColumn: "1 / 4",
+          gridRow: 1,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0 18px",
+          background: "var(--bg-sidebar)",
+          borderBottom: "1px solid var(--border-color)",
+          zIndex: 30,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: 0.5, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: "var(--accent)" }}>🔥</span> Laser Forge
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>
+            Generative vector workbench
+          </div>
+        </div>
+
+        {/* Global dimensions & pen inputs */}
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={headerLabelStyle}>Canvas</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <input
+                type="number"
+                value={w}
+                onChange={(e) => setCanvas(Number(e.target.value), h)}
+                style={headerInputStyle}
+                title="Canvas Width in millimeters"
+              />
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>×</span>
+              <input
+                type="number"
+                value={h}
+                onChange={(e) => setCanvas(w, Number(e.target.value))}
+                style={headerInputStyle}
+                title="Canvas Height in millimeters"
+              />
+              <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500, marginLeft: 2 }}>mm</span>
+            </div>
+          </div>
+
+          <div style={{ height: 16, width: 1, background: "var(--border-color)" }} />
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={headerLabelStyle}>Pen Stroke</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <input
+                type="number"
+                value={penWidthMm}
+                min={0.05}
+                step={0.1}
+                onChange={(e) => setPenWidthMm(Number(e.target.value))}
+                style={{ ...headerInputStyle, width: 52 }}
+                title="Pen Width in millimeters"
+              />
+              <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500, marginLeft: 2 }}>mm</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick status/info link */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <a
+            href="https://github.com/Nikolaibibo/laser-forge"
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: 11, color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}
+            className="transition-all-fast"
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+          >
+            v0.1.0 · GitHub
+          </a>
+        </div>
+      </header>
+
+      {/* Column 1: Generator & Pipeline (Left) */}
       <aside
         style={{
-          gridRow: "1 / 3",
           gridColumn: 1,
-          borderRight: "1px solid #2d2d2a",
-          background: "#141413",
+          gridRow: 2,
+          borderRight: "1px solid var(--border-color)",
+          background: "var(--bg-sidebar)",
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
           position: "relative",
         }}
+        className="scroller"
       >
-        <header style={{ padding: "16px 14px", borderBottom: "1px solid #2d2d2a" }}>
-          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 0.5 }}>
-            Laser Forge
-          </div>
-          <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>
-            Generative vector workbench
-          </div>
-        </header>
         <GeneratorPicker />
         <MotifPanel />
         <LayerStack />
@@ -171,36 +255,41 @@ export default function App() {
           style={{
             padding: 14,
             fontSize: 10,
-            color: "#555",
-            borderTop: "1px solid #2d2d2a",
+            color: "var(--text-muted)",
+            borderTop: "1px solid var(--border-color)",
+            lineHeight: 1.4,
           }}
         >
-          Export → vpype → LightBurn. See docs/laser-workflow.md.
+          Export → vpype → LightBurn.<br />See docs/laser-workflow.md.
         </footer>
       </aside>
 
+      {/* Column 2: Canvas Workspace (Center) */}
       <main
         style={{
           gridColumn: 2,
-          gridRow: "1 / 2",
+          gridRow: 2,
           display: "flex",
           flexDirection: "column",
           minHeight: 0,
           minWidth: 0,
+          background: "#171716",
         }}
       >
         <Stage key={generatorId} generatorId={generatorId} />
         <MachineDock />
       </main>
 
+      {/* Column 3: Parameters controls panel (Right) */}
       <aside
         style={{
           gridColumn: 3,
-          gridRow: "1 / 3",
-          background: "#141413",
-          borderLeft: "1px solid #2d2d2a",
+          gridRow: 2,
+          background: "var(--bg-sidebar)",
+          borderLeft: "1px solid var(--border-color)",
           overflowY: "auto",
         }}
+        className="scroller"
       >
         <Leva
           fill
@@ -208,14 +297,14 @@ export default function App() {
           titleBar={{ title: "Parameter", drag: false, filter: false }}
           theme={{
             colors: {
-              elevation1: "#141413",
-              elevation2: "#1d1d1b",
-              elevation3: "#2d2d2a",
-              accent1: "#e96a3a",
-              accent2: "#e96a3a",
-              accent3: "#e96a3a",
-              highlight1: "#bbb",
-              highlight2: "#eee",
+              elevation1: "transparent",
+              elevation2: "var(--bg-card)",
+              elevation3: "var(--bg-hover)",
+              accent1: "var(--accent)",
+              accent2: "var(--accent)",
+              accent3: "var(--accent)",
+              highlight1: "var(--text-secondary)",
+              highlight2: "var(--text-primary)",
               highlight3: "#fff",
             },
           }}
@@ -224,3 +313,25 @@ export default function App() {
     </div>
   );
 }
+
+const headerLabelStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  color: "var(--text-secondary)",
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+};
+
+const headerInputStyle: React.CSSProperties = {
+  width: 58,
+  background: "var(--bg-input)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border-color)",
+  padding: "4px 8px",
+  borderRadius: 6,
+  fontFamily: "var(--font-mono)",
+  fontSize: 11,
+  textAlign: "center",
+  outline: "none",
+  transition: "border-color 0.2s ease",
+};

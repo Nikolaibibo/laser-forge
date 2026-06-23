@@ -12,7 +12,7 @@ export function LayerStack() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div style={{ padding: "10px 12px", borderBottom: "1px solid #2d2d2a" }}>
+    <div style={{ padding: "12px", borderBottom: "1px solid var(--border-color)" }}>
       <div
         style={{
           display: "flex",
@@ -21,7 +21,7 @@ export function LayerStack() {
           marginBottom: 8,
         }}
       >
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#bbb" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: "var(--text-secondary)", textTransform: "uppercase" }}>
           PIPELINE
         </div>
         <div style={{ display: "flex", gap: 4 }}>
@@ -39,9 +39,10 @@ export function LayerStack() {
       {open && (
         <div
           style={{
-            background: "#1d1d1b",
-            border: "1px solid #333",
-            borderRadius: 3,
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-color)",
+            borderRadius: 6,
+            boxShadow: "var(--glass-shadow)",
             marginBottom: 8,
             overflow: "hidden",
           }}
@@ -59,16 +60,18 @@ export function LayerStack() {
                 textAlign: "left",
                 padding: "8px 10px",
                 background: "transparent",
-                color: "#ddd",
+                color: "var(--text-primary)",
                 border: "none",
-                borderBottom: "1px solid #2d2d2a",
+                borderBottom: "1px solid var(--border-color)",
                 cursor: "pointer",
                 fontSize: 12,
                 fontFamily: "inherit",
+                transition: "all 0.15s ease",
               }}
+              className="leva-c-folder" // Reuses Leva folder class logic for focus
             >
               <div style={{ fontWeight: 600 }}>{d.name}</div>
-              <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>
                 {d.description}
               </div>
             </button>
@@ -78,7 +81,7 @@ export function LayerStack() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {layers.length === 0 && (
-          <div style={{ fontSize: 10, color: "#666", fontStyle: "italic" }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic", padding: "4px 0" }}>
             No distortions — base generator only. Use + to add.
           </div>
         )}
@@ -91,21 +94,22 @@ export function LayerStack() {
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                padding: "4px 6px",
-                background: l.enabled ? "#22211f" : "#181816",
-                border: "1px solid #2d2d2a",
-                borderRadius: 3,
-                opacity: l.enabled ? 1 : 0.5,
+                padding: "6px 8px",
+                background: l.enabled ? "var(--bg-card)" : "rgba(20, 20, 18, 0.3)",
+                border: "1px solid var(--border-color)",
+                borderRadius: 6,
+                opacity: l.enabled ? 1 : 0.6,
+                transition: "all 0.2s ease",
               }}
             >
-              <span style={{ fontSize: 10, color: "#666", width: 16 }}>{i + 1}.</span>
+              <span style={{ fontSize: 10, color: "var(--text-muted)", width: 16 }}>{i + 1}.</span>
               <input
                 type="checkbox"
                 checked={l.enabled}
                 onChange={() => toggle(l.uid)}
-                style={{ accentColor: "#e96a3a" }}
+                style={{ accentColor: "var(--accent)" }}
               />
-              <span style={{ flex: 1, fontSize: 11, color: "#ddd" }}>{d?.name}</span>
+              <span style={{ flex: 1, fontSize: 12, color: "var(--text-primary)" }}>{d?.name}</span>
               <button style={tinyBtn} onClick={() => move(l.uid, -1)} disabled={i === 0}>
                 ▲
               </button>
@@ -128,29 +132,35 @@ export function LayerStack() {
 }
 
 const iconBtn: React.CSSProperties = {
-  width: 22,
-  height: 22,
+  width: 24,
+  height: 24,
   padding: 0,
-  background: "#2d2d2a",
-  color: "#eee",
-  border: "1px solid #444",
-  borderRadius: 3,
+  background: "var(--bg-card)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border-color)",
+  borderRadius: 4,
   cursor: "pointer",
   fontFamily: "inherit",
-  fontSize: 14,
-  lineHeight: 1,
+  fontSize: 12,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "all 0.15s ease",
 };
 
 const tinyBtn: React.CSSProperties = {
-  width: 18,
-  height: 18,
+  width: 20,
+  height: 20,
   padding: 0,
-  background: "#2d2d2a",
-  color: "#ccc",
-  border: "1px solid #3a3a38",
-  borderRadius: 2,
+  background: "var(--bg-hover)",
+  color: "var(--text-secondary)",
+  border: "1px solid var(--border-color)",
+  borderRadius: 3,
   cursor: "pointer",
   fontFamily: "inherit",
   fontSize: 9,
-  lineHeight: 1,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "all 0.15s ease",
 };

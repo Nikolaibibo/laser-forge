@@ -6,10 +6,11 @@ import { GENERATOR_GROUPS } from "../generators/registry";
 import { useApp } from "../state/store";
 
 const sectionLabel: CSSProperties = {
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 700,
-  letterSpacing: 1,
-  color: "#bbb",
+  letterSpacing: 1.2,
+  color: "var(--text-secondary)",
+  textTransform: "uppercase",
 };
 
 const cardStyle: CSSProperties = {
@@ -18,34 +19,40 @@ const cardStyle: CSSProperties = {
   gap: 8,
   width: "100%",
   textAlign: "left",
-  padding: "10px 12px",
-  background: "#1d1d1b",
-  border: "1px solid #2d2d2a",
-  borderRadius: 4,
+  padding: "12px 14px",
+  background: "var(--bg-card)",
+  border: "1px solid var(--border-color)",
+  borderRadius: 6,
   cursor: "pointer",
   fontFamily: "inherit",
+  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
 };
 
 const overlayStyle: CSSProperties = {
   position: "absolute",
   inset: 0,
-  zIndex: 10,
-  background: "#141413",
+  zIndex: 20,
+  background: "var(--bg-sidebar)",
+  backdropFilter: "var(--glass-blur)",
+  WebkitBackdropFilter: "var(--glass-blur)",
   overflowY: "auto",
 };
 
 const closeBtn: CSSProperties = {
-  width: 22,
-  height: 22,
+  width: 24,
+  height: 24,
   padding: 0,
-  background: "#2d2d2a",
-  color: "#eee",
-  border: "1px solid #444",
-  borderRadius: 3,
+  background: "var(--bg-hover)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border-color)",
+  borderRadius: 4,
   cursor: "pointer",
   fontFamily: "inherit",
-  fontSize: 12,
-  lineHeight: 1,
+  fontSize: 10,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "all 0.2s ease",
 };
 
 export function GeneratorPicker() {
@@ -83,21 +90,21 @@ export function GeneratorPicker() {
   }, [open]);
 
   return (
-    <div style={{ padding: "10px 14px", borderBottom: "1px solid #2d2d2a" }}>
+    <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border-color)" }}>
       <div style={{ ...sectionLabel, marginBottom: 6 }}>GENERATOR</div>
 
       <button style={cardStyle} onClick={() => setOpen(true)} title="Change generator">
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, color: "#fff" }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)" }}>
             {active?.name ?? id}
           </div>
-          <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>
             {activeGroup?.title}
           </div>
           <div
             style={{
               fontSize: 11,
-              color: "#888",
+              color: "var(--text-secondary)",
               marginTop: 4,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -107,21 +114,21 @@ export function GeneratorPicker() {
             {active?.description}
           </div>
         </div>
-        <span style={{ color: "#e96a3a", fontSize: 14, flexShrink: 0 }}>⇄</span>
+        <span style={{ color: "var(--accent)", fontSize: 14, flexShrink: 0 }}>⇄</span>
       </button>
 
       {open && (
-        <div ref={overlayRef} style={overlayStyle}>
+        <div ref={overlayRef} style={overlayStyle} className="scroller">
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               padding: "12px 14px",
-              borderBottom: "1px solid #2d2d2a",
+              borderBottom: "1px solid var(--border-color)",
               position: "sticky",
               top: 0,
-              background: "#141413",
+              background: "var(--bg-sidebar)",
               zIndex: 1,
             }}
           >
@@ -139,8 +146,8 @@ export function GeneratorPicker() {
                   fontWeight: 700,
                   letterSpacing: 1.2,
                   textTransform: "uppercase",
-                  color: "#777",
-                  padding: "12px 14px 4px",
+                  color: "var(--text-muted)",
+                  padding: "16px 14px 4px",
                 }}
               >
                 {group.title}
@@ -160,22 +167,23 @@ export function GeneratorPicker() {
                       width: "100%",
                       textAlign: "left",
                       padding: "10px 14px",
-                      background: isActive ? "#2d2d2a" : "transparent",
-                      color: isActive ? "#fff" : "#bbb",
+                      background: isActive ? "var(--bg-hover)" : "transparent",
+                      color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
                       border: "none",
                       borderLeft: isActive
-                        ? "3px solid #e96a3a"
+                        ? "3px solid var(--accent)"
                         : "3px solid transparent",
                       cursor: "pointer",
                       fontSize: 13,
                       fontFamily: "inherit",
+                      transition: "all 0.15s ease",
                     }}
                   >
                     <div style={{ fontWeight: 600 }}>{g.name}</div>
                     <div
                       style={{
                         fontSize: 11,
-                        color: isActive ? "#aaa" : "#666",
+                        color: isActive ? "var(--text-secondary)" : "var(--text-muted)",
                         marginTop: 2,
                         lineHeight: 1.3,
                       }}

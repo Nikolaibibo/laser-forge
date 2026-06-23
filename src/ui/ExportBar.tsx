@@ -17,9 +17,7 @@ export function ExportBar({ artwork, currentParams }: Props) {
   const generatorId = useApp((s) => s.generatorId);
   const w = useApp((s) => s.canvasWMm);
   const h = useApp((s) => s.canvasHMm);
-  const setCanvas = useApp((s) => s.setCanvas);
   const penWidthMm = useApp((s) => s.penWidthMm);
-  const setPenWidthMm = useApp((s) => s.setPenWidthMm);
   const layers = useApp((s) => s.layers);
   const layerParams = useApp((s) => s.layerParams);
   const [copied, setCopied] = useState(false);
@@ -48,125 +46,168 @@ export function ExportBar({ artwork, currentParams }: Props) {
 
   return (
     <div
+      className="glass-panel animate-fade-in"
       style={{
+        position: "absolute",
+        bottom: 24,
+        left: "50%",
+        transform: "translateX(-50%)",
         display: "flex",
-        gap: 16,
-        padding: "10px 16px",
-        borderTop: "1px solid #2d2d2a",
-        background: "#141413",
-        color: "#ccc",
-        fontSize: 12,
+        gap: 12,
+        padding: "8px 14px",
+        borderRadius: 12,
         alignItems: "center",
+        zIndex: 10,
+        whiteSpace: "nowrap",
       }}
     >
-      <label>
-        Seed{" "}
+      {/* Seed controls */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={labelStyle}>Seed</span>
         <input
           type="number"
           value={seed}
           onChange={(e) => setSeed(Number(e.target.value))}
           style={inputStyle}
         />
-      </label>
-      <button onClick={randomSeed} style={btnStyle}>
-        🎲 Reroll
-      </button>
-      <label>
-        W{" "}
-        <input
-          type="number"
-          value={w}
-          onChange={(e) => setCanvas(Number(e.target.value), h)}
-          style={{ ...inputStyle, width: 64 }}
-        />
-        mm
-      </label>
-      <label>
-        H{" "}
-        <input
-          type="number"
-          value={h}
-          onChange={(e) => setCanvas(w, Number(e.target.value))}
-          style={{ ...inputStyle, width: 64 }}
-        />
-        mm
-      </label>
-      <label title="Stroke width in preview + SVG export. 0.3 Fineliner · 0.5 Gel · 1–2 Filzstift.">
-        Pen{" "}
-        <input
-          type="number"
-          value={penWidthMm}
-          min={0.05}
-          step={0.1}
-          onChange={(e) => setPenWidthMm(Number(e.target.value))}
-          style={{ ...inputStyle, width: 56 }}
-        />
-        mm
-      </label>
-      <div style={{ flex: 1 }} />
-      <span style={{ color: "#777" }}>
-        {lineCount} lines · {pointCount.toLocaleString("en-US")} points
-      </span>
-      <button onClick={copyShareLink} style={btnStyle}>
-        {copied ? "✓ copied" : "🔗 Copy link"}
-      </button>
-      <label
-        title="Removes overlapping paths so the laser doesn't burn them twice."
-        style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
-      >
-        <input
-          type="checkbox"
-          checked={dedupe}
-          onChange={(e) => setDedupe(e.target.checked)}
-        />
-        Dedupe paths
-      </label>
-      <label
-        title="Joins open polylines whose endpoints touch into longer continuous paths, reducing pen lifts."
-        style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
-      >
-        <input
-          type="checkbox"
-          checked={join}
-          onChange={(e) => setJoin(e.target.checked)}
-        />
-        Join paths
-      </label>
-      <button
-        onClick={() => downloadSvg(artwork, `${generatorId}-${seed}.svg`, { dedupe, join, strokeWidthMm: penWidthMm })}
-        style={{ ...btnStyle, background: "#e96a3a", color: "#fff" }}
-      >
-        ⬇ SVG
-      </button>
-      <button
-        title="GRBL-G-code (M3 S20 up / M3 S160 down) zum Laden in CNC.js."
-        onClick={() => downloadGcode(artwork, `${generatorId}-${seed}.gcode`, { dedupe, join })}
-        style={{ ...btnStyle, background: "#3a7ae9", color: "#fff" }}
-      >
-        ⬇ G-code
-      </button>
+        <button onClick={randomSeed} style={btnStyle} title="Reroll Seed">
+          🎲 Reroll
+        </button>
+      </div>
+
+      <div style={dividerStyle} />
+
+      {/* Stats */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+          Geometry
+        </span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-secondary)" }}>
+          {lineCount} lines · {pointCount.toLocaleString("en-US")} pts
+        </span>
+      </div>
+
+      <div style={dividerStyle} />
+
+      {/* Dedupe & Join toggles */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <label
+          title="Removes overlapping paths so the laser doesn't burn them twice."
+          style={checkboxLabelStyle}
+        >
+          <input
+            type="checkbox"
+            checked={dedupe}
+            onChange={(e) => setDedupe(e.target.checked)}
+            style={checkboxStyle}
+          />
+          Dedupe
+        </label>
+        <label
+          title="Joins open polylines whose endpoints touch into longer continuous paths, reducing pen lifts."
+          style={checkboxLabelStyle}
+        >
+          <input
+            type="checkbox"
+            checked={join}
+            onChange={(e) => setJoin(e.target.checked)}
+            style={checkboxStyle}
+          />
+          Join
+        </label>
+      </div>
+
+      <div style={dividerStyle} />
+
+      {/* Share & Download triggers */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button onClick={copyShareLink} style={btnStyle}>
+          {copied ? "✓ copied" : "🔗 Share"}
+        </button>
+        <button
+          onClick={() => downloadSvg(artwork, `${generatorId}-${seed}.svg`, { dedupe, join, strokeWidthMm: penWidthMm })}
+          style={svgBtnStyle}
+        >
+          ⬇ SVG
+        </button>
+        <button
+          title="GRBL G-code for CNC machines."
+          onClick={() => downloadGcode(artwork, `${generatorId}-${seed}.gcode`, { dedupe, join })}
+          style={gcodeBtnStyle}
+        >
+          ⬇ G-code
+        </button>
+      </div>
     </div>
   );
 }
 
+const labelStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  color: "var(--text-secondary)",
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+};
+
 const inputStyle: React.CSSProperties = {
-  width: 88,
-  background: "#222",
-  color: "#fff",
-  border: "1px solid #333",
-  padding: "4px 6px",
-  borderRadius: 3,
-  fontFamily: "inherit",
-  fontSize: 12,
+  width: 76,
+  background: "var(--bg-input)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border-color)",
+  padding: "4px 8px",
+  borderRadius: 6,
+  fontFamily: "var(--font-mono)",
+  fontSize: 11,
+  outline: "none",
+};
+
+const dividerStyle: React.CSSProperties = {
+  width: 1,
+  height: 24,
+  background: "var(--border-color)",
+  margin: "0 4px",
 };
 
 const btnStyle: React.CSSProperties = {
   padding: "5px 12px",
-  background: "#2d2d2a",
-  color: "#eee",
-  border: "1px solid #444",
-  borderRadius: 3,
+  background: "var(--bg-hover)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border-color)",
+  borderRadius: 6,
   cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 12,
+  fontSize: 11,
+  fontWeight: 500,
+  transition: "all 0.15s ease",
+};
+
+const svgBtnStyle: React.CSSProperties = {
+  ...btnStyle,
+  background: "var(--accent)",
+  borderColor: "transparent",
+  color: "#fff",
+  fontWeight: 600,
+};
+
+const gcodeBtnStyle: React.CSSProperties = {
+  ...btnStyle,
+  background: "#3a7ae9",
+  borderColor: "transparent",
+  color: "#fff",
+  fontWeight: 600,
+};
+
+const checkboxLabelStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  cursor: "pointer",
+  fontSize: 11,
+  color: "var(--text-secondary)",
+  fontWeight: 500,
+};
+
+const checkboxStyle: React.CSSProperties = {
+  accentColor: "var(--accent)",
+  cursor: "pointer",
 };

@@ -1,0 +1,207 @@
+/* Design system variables & base styles for Laser Forge */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Colors */
+  --bg-base: #0a0a09;
+  --bg-sidebar: rgba(18, 18, 16, 0.85);
+  --bg-card: rgba(28, 28, 26, 0.7);
+  --bg-input: #1a1a19;
+  --bg-hover: #262623;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(233, 106, 58, 0.4);
+  
+  --accent: #e96a3a;
+  --accent-hover: #f17b4f;
+  --accent-glow: rgba(233, 106, 58, 0.15);
+  
+  --text-primary: #f5f5f3;
+  --text-secondary: #a8a8a2;
+  --text-muted: #62625c;
+  
+  --glass-bg: rgba(20, 20, 18, 0.65);
+  --glass-blur: blur(12px);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.07);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+  /* Canvas preview */
+  --paper-bg: #fdfdfb;
+  --paper-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar colors and thickness */
+.scroller {
+  --scrollbar-thumb: var(--bg-hover);
+  --scrollbar-track: transparent;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+@supports not (scrollbar-color: auto) {
+  .scroller::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scroller::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+  .scroller::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+}
+
+/* Global inputs & buttons styling */
+input, select, textarea, button {
+  font-family: inherit;
+}
+
+/* Glassmorphism panel styling */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Micro-animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.transition-all-fast {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Plotter bed background grid pattern */
+.plotter-bed-grid {
+  background-color: #171716;
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0),
+    radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+/* Custom themed styling overrides for Leva UI */
+#leva__root {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+#leva__root > div {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.leva-c-titleBar {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  padding: 12px 14px !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  color: var(--text-secondary) !important;
+}
+
+.leva-c-folder {
+  border-bottom: 1px solid var(--border-color) !important;
+  background: transparent !important;
+}
+
+.leva-c-folder > div {
+  background: transparent !important;
+}
+
+.leva-c-folder button {
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.5px !important;
+  color: var(--text-primary) !important;
+  padding: 8px 12px !important;
+}
+
+.leva-c-label {
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  color: var(--text-secondary) !important;
+}
+
+.leva-c-value {
+  font-family: var(--font-mono) !important;
+  font-size: 10px !important;
+}
+
+.leva-c-slider {
+  background: var(--bg-hover) !important;
+  border-radius: 3px !important;
+  height: 4px !important;
+}
+
+.leva-c-slider > div {
+  background: var(--accent) !important;
+  border-radius: 3px !important;
+}
+
+.leva-c-slider-handle {
+  background: var(--text-primary) !important;
+  border: 1px solid var(--accent) !important;
+  box-shadow: 0 0 4px var(--accent) !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+}
+
+.leva-c-input {
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.leva-c-input:focus-within {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
+}
+
+.leva-c-select {
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
+  color: var(--text-primary) !important;
+  padding: 3px 6px !important;
+}
+
+.leva-c-checkbox {
+  accent-color: var(--accent) !important;
+}

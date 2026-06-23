@@ -76,21 +76,24 @@ export function CanvasPreview({ artwork }: Props) {
   return (
     <div
       ref={wrapRef}
+      className="plotter-bed-grid"
       style={{
         flex: 1,
         minHeight: 0,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 24,
-        background: "#1d1d1b",
+        padding: 32,
       }}
     >
       <canvas
         ref={canvasRef}
         style={{
-          boxShadow: "0 10px 40px rgba(0,0,0,0.4)",
-          background: "#fafaf7",
+          boxShadow: "var(--paper-shadow)",
+          background: "var(--paper-bg)",
+          borderRadius: 2,
+          border: "1px solid rgba(0, 0, 0, 0.05)",
+          transition: "box-shadow 0.3s ease",
         }}
       />
     </div>

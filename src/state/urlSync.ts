@@ -14,13 +14,22 @@ export type SharePayload = {
 
 export const encodePayload = (data: SharePayload): string => {
   const json = JSON.stringify(data);
-  // btoa is UTF-16 unsafe, but our params are ASCII/numbers — good enough
-  return btoa(json);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 };
 
 export const decodePayload = (hash: string): SharePayload | null => {
   try {
-    const json = atob(hash);
+    const binary = atob(hash);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const json = new TextDecoder().decode(bytes);
     return JSON.parse(json) as SharePayload;
   } catch {
     return null;
