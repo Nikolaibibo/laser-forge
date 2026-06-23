@@ -121,6 +121,7 @@ export function ExportBar({ artwork, currentParams }: Props) {
     >
       {/* Drag handle */}
       <div
+        onDoubleClick={() => setPosition({ x: 0, y: 0 })}
         style={{
           display: "flex",
           alignItems: "center",
@@ -130,7 +131,7 @@ export function ExportBar({ artwork, currentParams }: Props) {
           userSelect: "none",
           touchAction: "none",
         }}
-        title="Drag to reposition panel"
+        title="Drag to reposition · double-click to recenter"
       >
         <svg width="8" height="16" viewBox="0 0 8 16" fill="currentColor">
           <circle cx="2" cy="2" r="1.2" />

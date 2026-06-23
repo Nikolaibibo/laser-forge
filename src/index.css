@@ -1,5 +1,21 @@
 /* Design system variables & base styles for Laser Forge */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Self-hosted fonts (latin subset, variable weight) — no external CDN call,
+   works fully offline. Files live in public/fonts/. Source: Google Fonts. */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/outfit.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono.woff2') format('woff2');
+}
 
 :root {
   --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
@@ -86,9 +102,13 @@ input, select, textarea, button {
 }
 
 /* Micro-animations */
+/* NOTE: opacity-only on purpose. This fade is applied to the draggable
+   ExportBar, whose position is driven by an inline `transform`. A keyframe
+   that also animates `transform` (with fill-mode: forwards) would override
+   that inline transform and freeze the panel — breaking the drag. */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-fade-in {
