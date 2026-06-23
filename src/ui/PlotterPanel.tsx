@@ -123,7 +123,7 @@ export function PlotterPanel() {
     <div style={box}>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <strong>Plotter</strong>
-        <span style={{ color: state === "Alarm" ? "#e55" : "#6c6" }}>● {state}</span>
+        <span style={{ color: state === "Alarm" ? "#d9383a" : "#2b7a4b" }}>● {state}</span>
         {!connected ? (
           <button
             style={btn}
@@ -180,7 +180,7 @@ export function PlotterPanel() {
               Trace (dry)
             </button>
             <button
-              style={{ ...btn, background: "#e96a3a", color: "#fff" }}
+              style={{ ...btn, background: "var(--accent)", color: "#fff", borderColor: "transparent", fontWeight: 600 }}
               onClick={plot}
             >
               Plot
@@ -226,9 +226,9 @@ export function PlotterPanel() {
 
 const box: React.CSSProperties = {
   padding: 12,
-  borderTop: "1px solid #2d2d2a",
-  background: "#141413",
-  color: "#ccc",
+  borderTop: "1px solid var(--border-color)",
+  background: "var(--bg-sidebar)",
+  color: "var(--text-secondary)",
   fontSize: 12,
   display: "flex",
   flexDirection: "column",
@@ -242,9 +242,13 @@ const row: React.CSSProperties = {
 };
 const btn: React.CSSProperties = {
   padding: "5px 10px",
-  background: "#2d2d2a",
-  color: "#eee",
-  border: "1px solid #444",
-  borderRadius: 3,
+  background: "var(--bg-card)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border-color)",
+  borderRadius: 6,
   cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 11,
+  fontWeight: 500,
+  transition: "all 0.15s ease",
 };

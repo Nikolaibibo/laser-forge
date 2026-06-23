@@ -126,7 +126,7 @@ export function AxiDrawPanel() {
         <strong>AxiDraw</strong>
         <span
           style={{
-            color: conn === "online" ? "#6c6" : conn === "offline" ? "#e55" : "#cc6",
+            color: conn === "online" ? "#2b7a4b" : conn === "offline" ? "#d9383a" : "#d97d24",
           }}
           title="Local bridge process (bridge/bridge.py)"
         >
@@ -154,11 +154,11 @@ export function AxiDrawPanel() {
           Accel <strong style={{ width: 22, textAlign: "right" }}>{accel}</strong>
           <input type="range" min={5} max={80} value={accel} onChange={(e) => setAccel(Number(e.target.value))} />
         </label>
-        <span style={{ color: "#777", fontSize: 11 }}>niedriger = sauberere Feindetails</span>
+        <span style={{ color: "var(--text-muted)", fontSize: 11 }}>niedriger = sauberere Feindetails</span>
       </div>
 
       {offline && (
-        <div style={{ color: "#e98", fontSize: 11, lineHeight: 1.4 }}>
+        <div style={{ color: "#d97d24", fontSize: 11, lineHeight: 1.4 }}>
           Bridge not reachable. Start it locally:
           <code style={code}>~/.venvs/axidraw/bin/python bridge/bridge.py</code>
           Plotting only works from the local <code style={code}>npm run dev</code> instance.
@@ -191,7 +191,7 @@ export function AxiDrawPanel() {
           Draw frame
         </button>
         <button
-          style={{ ...btn, background: "#e96a3a", color: "#fff" }}
+          style={{ ...btn, background: "var(--accent)", color: "#fff", borderColor: "transparent", fontWeight: 600 }}
           onClick={doPlot}
           disabled={busy || offline || !artwork}
         >
@@ -216,18 +216,18 @@ export function AxiDrawPanel() {
         </label>
       </div>
 
-      {warn && <div style={{ color: "#e9b04a", fontSize: 11, lineHeight: 1.4 }}>{warn}</div>}
-      {plotting && <div style={{ color: "#9ab89a" }}>Plotting… (press Stop to abort)</div>}
-      {msg && !plotting && <div style={{ color: "#999", fontSize: 11 }}>{msg}</div>}
+      {warn && <div style={{ color: "#d97d24", fontSize: 11, lineHeight: 1.4 }}>{warn}</div>}
+      {plotting && <div style={{ color: "#2b7a4b" }}>Plotting… (press Stop to abort)</div>}
+      {msg && !plotting && <div style={{ color: "var(--text-muted)", fontSize: 11 }}>{msg}</div>}
     </div>
   );
 }
 
 const box: React.CSSProperties = {
   padding: 12,
-  borderTop: "1px solid #2d2d2a",
-  background: "#141413",
-  color: "#ccc",
+  borderTop: "1px solid var(--border-color)",
+  background: "var(--bg-sidebar)",
+  color: "var(--text-secondary)",
   fontSize: 12,
   display: "flex",
   flexDirection: "column",
@@ -241,17 +241,24 @@ const row: React.CSSProperties = {
 };
 const btn: React.CSSProperties = {
   padding: "5px 10px",
-  background: "#2d2d2a",
-  color: "#eee",
-  border: "1px solid #444",
-  borderRadius: 3,
+  background: "var(--bg-card)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border-color)",
+  borderRadius: 6,
   cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 11,
+  fontWeight: 500,
+  transition: "all 0.15s ease",
 };
 const code: React.CSSProperties = {
   display: "inline-block",
   margin: "0 4px",
   padding: "1px 5px",
-  background: "#000",
-  borderRadius: 3,
+  background: "var(--bg-hover)",
+  border: "1px solid var(--border-color)",
+  borderRadius: 4,
+  fontFamily: "var(--font-mono)",
   fontSize: 10,
+  color: "var(--text-primary)",
 };

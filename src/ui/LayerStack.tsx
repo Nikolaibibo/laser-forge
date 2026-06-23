@@ -95,7 +95,7 @@ export function LayerStack() {
                 alignItems: "center",
                 gap: 6,
                 padding: "6px 8px",
-                background: l.enabled ? "var(--bg-card)" : "rgba(20, 20, 18, 0.3)",
+                background: l.enabled ? "var(--bg-card)" : "var(--bg-hover)",
                 border: "1px solid var(--border-color)",
                 borderRadius: 6,
                 opacity: l.enabled ? 1 : 0.6,

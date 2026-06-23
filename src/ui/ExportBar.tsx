@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useApp } from "../state/store";
 import { downloadSvg } from "../render/svgExport";
 import { downloadGcode } from "../plotter/gcode";
@@ -24,6 +24,59 @@ export function ExportBar({ artwork, currentParams }: Props) {
   const [dedupe, setDedupe] = useState(false);
   const [join, setJoin] = useState(false);
 
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    
+    // Ignore interactive elements
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "BUTTON" ||
+      target.tagName === "SELECT" ||
+      target.tagName === "LABEL" ||
+      target.closest("button") ||
+      target.closest("input") ||
+      target.closest("select") ||
+      target.closest("label")
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    setIsDragging(true);
+    dragStart.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    };
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      setPosition({
+        x: e.clientX - dragStart.current.x,
+        y: e.clientY - dragStart.current.y,
+      });
+    };
+
+    const handlePointerUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isDragging]);
+
   const copyShareLink = async () => {
     const payload: SharePayload = {
       g: generatorId,
@@ -47,11 +100,12 @@ export function ExportBar({ artwork, currentParams }: Props) {
   return (
     <div
       className="glass-panel animate-fade-in"
+      onPointerDown={handlePointerDown}
       style={{
         position: "absolute",
         bottom: 24,
         left: "50%",
-        transform: "translateX(-50%)",
+        transform: `translateX(-50%) translate(${position.x}px, ${position.y}px)`,
         display: "flex",
         gap: 12,
         padding: "8px 14px",
@@ -59,8 +113,36 @@ export function ExportBar({ artwork, currentParams }: Props) {
         alignItems: "center",
         zIndex: 10,
         whiteSpace: "nowrap",
+        boxShadow: isDragging ? "0 20px 40px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05)" : "var(--glass-shadow)",
+        border: isDragging ? "1px solid var(--accent)" : "var(--glass-border)",
+        transition: isDragging ? "none" : "box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        cursor: isDragging ? "grabbing" : "default",
       }}
     >
+      {/* Drag handle */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          cursor: isDragging ? "grabbing" : "grab",
+          padding: "4px 8px 4px 2px",
+          color: "var(--text-muted)",
+          userSelect: "none",
+          touchAction: "none",
+        }}
+        title="Drag to reposition panel"
+      >
+        <svg width="8" height="16" viewBox="0 0 8 16" fill="currentColor">
+          <circle cx="2" cy="2" r="1.2" />
+          <circle cx="2" cy="6" r="1.2" />
+          <circle cx="2" cy="10" r="1.2" />
+          <circle cx="2" cy="14" r="1.2" />
+          <circle cx="6" cy="2" r="1.2" />
+          <circle cx="6" cy="6" r="1.2" />
+          <circle cx="6" cy="10" r="1.2" />
+          <circle cx="6" cy="14" r="1.2" />
+        </svg>
+      </div>
       {/* Seed controls */}
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span style={labelStyle}>Seed</span>

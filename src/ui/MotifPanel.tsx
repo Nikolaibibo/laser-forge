@@ -59,7 +59,7 @@ export function MotifPanel() {
         Load SVG…
       </button>
       {motif && (
-        <div style={{ marginTop: 8, color: "#95b895", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div style={{ marginTop: 8, color: "#2b7a4b", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 11 }}>
             {motif.name} ({motif.polylines.length} paths)
           </span>
@@ -68,7 +68,7 @@ export function MotifPanel() {
           </button>
         </div>
       )}
-      {error && <div style={{ marginTop: 8, color: "#e0584f", fontSize: 11 }}>{error}</div>}
+      {error && <div style={{ marginTop: 8, color: "#d9383a", fontSize: 11 }}>{error}</div>}
     </div>
   );
 }

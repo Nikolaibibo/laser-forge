@@ -40,7 +40,7 @@ function MachineDock() {
           display: "flex",
           gap: 4,
           padding: "8px 12px 0",
-          background: "rgba(0, 0, 0, 0.15)",
+          background: "rgba(0, 0, 0, 0.02)",
           borderBottom: "1px solid var(--border-color)",
         }}
       >
@@ -273,7 +273,7 @@ export default function App() {
           flexDirection: "column",
           minHeight: 0,
           minWidth: 0,
-          background: "#171716",
+          background: "var(--bg-base)",
         }}
       >
         <Stage key={generatorId} generatorId={generatorId} />
