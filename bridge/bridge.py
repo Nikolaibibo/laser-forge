@@ -34,7 +34,9 @@ from __future__ import annotations
 
 import glob
 import json
+import mimetypes
 import os
+import posixpath
 import re
 import shutil
 import signal
@@ -49,6 +51,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 # ---------------------------------------------------------------------------
 VENV = os.path.expanduser("~/.venvs/axidraw")
 AXICLI = os.path.join(VENV, "bin", "axicli")
+# Built app to serve (so the Pi station is self-contained: app + API on one port,
+# same origin → no mixed-content / CORS). Default: <repo>/dist next to bridge/.
+STATIC_DIR = os.environ.get(
+    "LASER_FORGE_DIST",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist"),
+)
 # The EBB enumerates under different /dev/cu.usbmodem* names per USB port, so
 # resolve dynamically: prefer $AXIDRAW_PORT, else the first usbmodem device.
 PORT_PREF = os.environ.get("AXIDRAW_PORT", "/dev/cu.usbmodem11101")
@@ -58,8 +66,13 @@ SCALE = 1.25  # 16T vs 20T pulley correction (= 20/16)
 def resolve_port() -> str:
     if os.path.exists(PORT_PREF):
         return PORT_PREF
-    cands = sorted(glob.glob("/dev/cu.usbmodem*"))
-    return cands[0] if cands else PORT_PREF
+    # macOS: /dev/cu.usbmodem* · Linux/Pi: the EBB enumerates as /dev/ttyACM*
+    # (USB CDC ACM), occasionally /dev/ttyUSB*.
+    for pat in ("/dev/cu.usbmodem*", "/dev/ttyACM*", "/dev/ttyUSB*"):
+        cands = sorted(glob.glob(pat))
+        if cands:
+            return cands[0]
+    return PORT_PREF
 
 
 def tty_of(port: str) -> str:
@@ -194,7 +207,12 @@ def free_port() -> None:
     detecting it first silently skipped it and left the port held. pkill is a
     cheap no-op when the process isn't running. The settle wait lets the port
     release before axicli connects; axicli then holds it for the whole plot, so
-    a tomedo respawn can't re-grab mid-plot."""
+    a tomedo respawn can't re-grab mid-plot.
+
+    No-op on Linux (the Pi has no tomedo/CardListener) — skipping it keeps the
+    interactive buttons snappy (no 1 s settle per call)."""
+    if sys.platform != "darwin":
+        return
     try:
         subprocess.run(["pkill", "-f", "CardListenerStandalone"], timeout=5)
         threading.Event().wait(1.0)
@@ -357,7 +375,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path.split("?")[0] == "/status":
+        path = self.path.split("?")[0]
+        if path == "/status":
             self._json(200, {
                 "ok": True,
                 "plotting": PLOT_PROC is not None and PLOT_PROC.poll() is None,
@@ -366,8 +385,32 @@ class Handler(BaseHTTPRequestHandler):
                 "scale": SCALE,
                 "profiles": list(PROFILES.keys()),
             })
+        elif os.path.isdir(STATIC_DIR):
+            self._serve_static(path)
         else:
             self._json(404, {"ok": False, "error": "not found"})
+
+    def _serve_static(self, url_path: str):
+        """Serve the built app from STATIC_DIR. SPA: unknown paths fall back to
+        index.html. Path is sanitised to stay inside STATIC_DIR (no traversal)."""
+        rel = posixpath.normpath(url_path.lstrip("/"))
+        if rel in ("", ".") or rel.endswith("/"):
+            rel = "index.html"
+        target = os.path.join(STATIC_DIR, *rel.split("/"))
+        if not os.path.abspath(target).startswith(os.path.abspath(STATIC_DIR)) or not os.path.isfile(target):
+            target = os.path.join(STATIC_DIR, "index.html")  # SPA fallback
+        if not os.path.isfile(target):
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        ctype = mimetypes.guess_type(target)[0] or "application/octet-stream"
+        with open(target, "rb") as fh:
+            data = fh.read()
+        self.send_response(200)
+        self._cors()
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def do_POST(self):
         path = self.path.split("?")[0]
@@ -414,12 +457,18 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    host = "127.0.0.1"
+    # Default to 0.0.0.0 so other LAN devices reach the Pi station; override with
+    # AXIDRAW_BRIDGE_HOST=127.0.0.1 for a Mac-local-only bridge.
+    host = os.environ.get("AXIDRAW_BRIDGE_HOST", "0.0.0.0")
     port = int(os.environ.get("AXIDRAW_BRIDGE_PORT", "4760"))
     if not shutil.which(AXICLI) and not os.path.exists(AXICLI):
         print(f"WARNING: axicli not found at {AXICLI} — plotting will fail.", file=sys.stderr)
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"Laser Forge AxiDraw bridge on http://{host}:{port}  (port={resolve_port()}, model 6, ×{SCALE})")
+    if os.path.isdir(STATIC_DIR):
+        print(f"Serving app from {STATIC_DIR}  →  open http://<this-host>:{port}/")
+    else:
+        print(f"(no app build at {STATIC_DIR} — API only; set LASER_FORGE_DIST to serve the app)")
     print("Endpoints: /status /pen-up /pen-down /set-zero /align /home /outline /plot /stop")
     try:
         server.serve_forever()

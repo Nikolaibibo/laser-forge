@@ -21,7 +21,15 @@ export type BridgeStatus = {
 
 export type BridgeResult = { ok: boolean; message?: string };
 
-const DEFAULT_BASE = "http://127.0.0.1:4760";
+// Bridge base URL:
+// - VITE_BRIDGE_BASE wins if set (escape hatch).
+// - Served FROM the Pi bridge (app + API same origin) → "" = relative fetches.
+// - Vite dev/preview (5173/4173) → the local Mac bridge on :4760.
+const DEFAULT_BASE: string =
+  (import.meta.env?.VITE_BRIDGE_BASE as string | undefined) ??
+  (typeof location !== "undefined" && (location.port === "5173" || location.port === "4173")
+    ? "http://127.0.0.1:4760"
+    : "");
 
 /** Thrown when the bridge process can't be reached at all. */
 export class BridgeUnreachable extends Error {
