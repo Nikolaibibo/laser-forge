@@ -107,12 +107,31 @@ useApp.getState().setMotif(null);
   assert.ok(art.polylines.length > 0, "frame + motif + title still render");
 }
 // 8. overflow: 30 rows still fit inside the canvas (fit pass scales text down)
+//    Also asserts that title+row content doesn't overrun the inner-bottom margin (iy1),
+//    which the canvas-bounds check is too loose to catch.
 {
   const many = Array.from({ length: 30 }, (_, i) => `Row ${i}: value ${i}`).join("\n");
   const art = specsheet.generate({ ...P, specs: many }, 1, canvas);
+  // Canvas-bounds assertion (kept for completeness).
   for (const l of art.polylines) {
     for (const [x, y] of l.points) {
       assert.ok(x >= 0 && x <= 148 && y >= 0 && y <= 210, `point outside canvas: ${x},${y}`);
+    }
+  }
+  // Tighter check: content polylines (title + rows) must not exceed the inner-bottom margin.
+  // Mirror Test 5's exact formulas.
+  {
+    const pad = Math.max(3, Math.min(canvas.wMm, canvas.hMm) * 0.03);
+    const iy0 = P.frameInsetMm + pad;
+    const iy1 = canvas.hMm - P.frameInsetMm - pad;
+    const baseline = specsheet.generate({ ...P, specs: "", footer: "" }, 1, canvas);
+    const contentPolylines = art.polylines.slice(baseline.polylines.length);
+    if (contentPolylines.length > 0) {
+      const maxY = Math.max(...contentPolylines.flatMap((l) => l.points.map(([, y]) => y)));
+      assert.ok(
+        maxY <= iy1 + 0.5,
+        `30-row content overruns inner-bottom margin: maxY=${maxY.toFixed(2)}, iy1=${iy1.toFixed(2)}`,
+      );
     }
   }
 }

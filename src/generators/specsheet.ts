@@ -158,14 +158,14 @@ export const specsheet: GeneratorDef<Params> = {
         }
         y += specMm * p.rowSpacing;
       }
-      return { lines: acc, height: y - top };
+      return { lines: acc, height: y - (iy0 + slotH) };
     };
 
     // Fit pass: scale text so title+rows fit the area below the motif slot, minus
     // the footer reserve. One corrective pass suffices (width-clamping only shortens).
     const budget = innerH - slotH - footerReserve;
     const probe = buildText(1);
-    const s = probe.height > budget && probe.height > 0 ? budget / probe.height : 1;
+    const s = probe.height > budget && probe.height > 0 && budget > 0 ? budget / probe.height : 1;
     out.push(...(s === 1 ? probe.lines : buildText(s).lines));
 
     // Footer, bottom-anchored.
