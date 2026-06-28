@@ -21,31 +21,39 @@
   --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Colors */
-  --bg-base: #faf9f5;
-  --bg-sidebar: rgba(244, 243, 238, 0.85);
-  --bg-card: #ffffff;
-  --bg-input: #ffffff;
-  --bg-hover: #f2efe8;
-  --border-color: rgba(0, 0, 0, 0.06);
-  --border-focus: rgba(255, 107, 74, 0.4);
-  
-  --accent: #ff6b4a;
-  --accent-hover: #ff8166;
-  --accent-glow: rgba(255, 107, 74, 0.12);
-  
-  --text-primary: #2c2a27;
-  --text-secondary: #787670;
-  --text-muted: #a4a29a;
-  
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-blur: blur(12px);
-  --glass-border: 1px solid rgba(0, 0, 0, 0.06);
-  --glass-shadow: 0 8px 32px 0 rgba(142, 137, 122, 0.1);
+  /* Chrome (cool charcoal) */
+  --bg-chrome: #11151b;
+  --bg-panel: #161b22;
+  --bg-raised: #1c222b;
+  --bg-hover: #232a34;
+  --bg-canvas: #f7f8fa;          /* the plotter "bed" stays bright */
+  --bg-paper: #fafaf7;           /* off-white thumbnail / paper bed */
 
-  /* Canvas preview */
-  --paper-bg: #ffffff;
-  --paper-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
+  --line: #2a313b;               /* 1px hairlines */
+  --line-strong: #39424f;
+
+  --text-primary: #e6e9ee;
+  --text-secondary: #aab2bf;
+  --text-muted: #8b95a3;
+
+  --accent: #f97316;             /* laser-orange */
+  --text-on-accent: #ffffff;     /* text/marks rendered on accent-coloured surfaces */
+  --accent-hover: #fb8a3c;
+  --color-gcode: #3a7ae9;        /* G-code button blue */
+  --color-gcode-hover: #4f8ff0;
+  --accent-glow: rgba(249, 115, 22, 0.16);
+  --ok: #3fb950;
+  --err: #f85149;
+
+  --space: 8px;
+  --radius: 4px;
+
+  --z-raised: 10;
+  --z-drawer: 20;
+  --z-gallery: 30;
+  --z-toast: 50;
+
+  --shadow-overlay: rgba(0, 0, 0, 0.45);
 }
 
 html, body, #root {
@@ -53,7 +61,7 @@ html, body, #root {
   padding: 0;
   height: 100%;
   width: 100%;
-  background: var(--bg-base);
+  background: var(--bg-chrome);
   color: var(--text-primary);
   font-family: var(--font-sans);
   overflow: hidden;
@@ -92,20 +100,11 @@ input, select, textarea, button {
   font-family: inherit;
 }
 
-/* Glassmorphism panel styling */
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: var(--glass-shadow);
-}
-
 /* Micro-animations */
-/* NOTE: opacity-only on purpose. This fade is applied to the draggable
-   ExportBar, whose position is driven by an inline `transform`. A keyframe
-   that also animates `transform` (with fill-mode: forwards) would override
-   that inline transform and freeze the panel — breaking the drag. */
+/* NOTE: opacity-only on purpose. This fade is used by overlay panels
+   (gallery, console slide-ins). A keyframe that also animates `transform`
+   (with fill-mode: forwards) would conflict with panels whose position is
+   driven by an inline transform. */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -121,107 +120,1419 @@ input, select, textarea, button {
 
 /* Plotter bed background grid pattern */
 .plotter-bed-grid {
-  background-color: #f1f0e8;
-  background-image: 
-    radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 0),
-    radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 0);
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 0),
+    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 0);
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
 }
 
-/* Custom themed styling overrides for Leva UI */
-#leva__root {
-  width: 100% !important;
-  margin: 0 !important;
+/* === Controls === */
+
+/* Base control wrapper — default is column (label above) */
+.lf-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  cursor: default;
 }
 
-#leva__root > div {
-  background: transparent !important;
-  box-shadow: none !important;
+/* Row variant: label on left, input on right */
+.lf-control--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.leva-c-titleBar {
-  background: transparent !important;
-  border-bottom: 1px solid var(--border-color) !important;
-  padding: 12px 14px !important;
-  font-family: var(--font-sans) !important;
-  font-weight: 700 !important;
-  font-size: 11px !important;
-  letter-spacing: 1px !important;
-  text-transform: uppercase !important;
-  color: var(--text-secondary) !important;
+/* Col variant: explicit stack (label then input below) */
+.lf-control--col {
+  flex-direction: column;
 }
 
-.leva-c-folder {
-  border-bottom: 1px solid var(--border-color) !important;
-  background: transparent !important;
+/* Control label */
+.lf-control__label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  user-select: none;
+  flex-shrink: 0;
 }
 
-.leva-c-folder > div {
-  background: transparent !important;
+/* NumberField — slider + box container */
+.lf-numfield {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
 }
 
-.leva-c-folder button {
-  font-family: var(--font-sans) !important;
-  font-weight: 600 !important;
-  font-size: 11px !important;
-  letter-spacing: 0.5px !important;
-  color: var(--text-primary) !important;
-  padding: 8px 12px !important;
+/* Range slider */
+.lf-slider {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--line-strong);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
 }
 
-.leva-c-label {
-  font-family: var(--font-sans) !important;
-  font-size: 11px !important;
-  color: var(--text-secondary) !important;
+.lf-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
 }
 
-.leva-c-value {
-  font-family: var(--font-mono) !important;
-  font-size: 10px !important;
+.lf-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
 }
 
-.leva-c-slider {
-  background: var(--bg-hover) !important;
-  border-radius: 3px !important;
-  height: 4px !important;
+.lf-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
-.leva-c-slider > div {
-  background: var(--accent) !important;
-  border-radius: 3px !important;
+/* Numeric display/input box */
+.lf-numbox {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 2px 5px;
+  min-width: 52px;
 }
 
-.leva-c-slider-handle {
-  background: #ffffff !important;
-  border: 1px solid var(--accent) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
-  width: 10px !important;
-  height: 10px !important;
-  border-radius: 50% !important;
+/* Scrub variant — horizontal drag cursor */
+.lf-numbox--scrub {
+  cursor: ew-resize;
 }
 
-.leva-c-input {
-  background: var(--bg-input) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 4px !important;
-  color: var(--text-primary) !important;
-  font-family: var(--font-sans) !important;
+.lf-numbox:focus-within {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
 }
 
-.leva-c-input:focus-within {
+/* Numeric input element inside the box */
+.lf-numinput {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+  text-align: right;
+  padding: 0;
+}
+
+/* Unit label */
+.lf-unit {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* Toggle switch */
+.lf-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--line-strong);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.lf-toggle--on {
+  background: var(--accent);
+}
+
+.lf-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Toggle knob */
+.lf-toggle__knob {
+  position: absolute;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  transition: transform 0.15s ease;
+  pointer-events: none;
+}
+
+.lf-toggle--on .lf-toggle__knob {
+  transform: translateX(12px);
+}
+
+/* Segmented control */
+.lf-segmented {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-raised);
+}
+
+.lf-seg {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  padding: 3px 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s ease, color 0.1s ease;
+  user-select: none;
+}
+
+.lf-seg:last-child {
+  border-right: none;
+}
+
+.lf-seg:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.lf-seg--on {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.lf-seg--on:hover {
+  background: var(--accent-hover);
+}
+
+.lf-seg:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Select dropdown */
+.lf-select {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 3px 22px 3px 6px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  /* hex matches --text-muted #8b95a3; CSS vars can't be used inside url() data-URIs */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b95a3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  outline: none;
+}
+
+.lf-select:focus-visible {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Text input (single line) */
+.lf-textinput {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  width: 100%;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.lf-textinput:focus-visible {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Textarea (multi-line) */
+.lf-textarea {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  width: 100%;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.lf-textarea:focus-visible {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Color swatch + hex display */
+.lf-color {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lf-color input[type="color"] {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1px;
+  background: var(--bg-raised);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lf-color input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.lf-color input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+/* Hex code display */
+.lf-color__hex {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  user-select: all;
+}
+
+/* Control group container */
+.lf-controls {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 1.25);
+  padding: var(--space);
+}
+
+/* === CAD Grid Shell === */
+
+.lf-app {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  grid-template-rows: 44px 1fr 44px;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg-chrome);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+/* TopBar spans all columns in row 1 */
+.lf-topbar {
+  grid-column: 1 / 4;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--line);
+  z-index: var(--z-raised);
+  height: 44px;
+  gap: 16px;
+}
+
+/* Wordmark — left slot */
+.lf-wordmark {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.lf-diamond {
+  color: var(--accent);
+}
+
+/* Center cluster */
+.lf-topbar-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+/* Right cluster */
+.lf-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Field = label + input pair */
+.lf-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+}
+
+.lf-field-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.lf-field-input {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+  width: 60px;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.lf-field-input::-webkit-outer-spin-button,
+.lf-field-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.lf-field-input:focus {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Divider char between W and H */
+.lf-divider-char {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  user-select: none;
+}
+
+/* Unit label (mm) */
+.lf-unit-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+/* Vertical separator */
+.lf-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--line-strong);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Icon button (reroll) */
+.lf-icon-btn {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 2px 6px;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.lf-icon-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Share button */
+.lf-share-btn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-on-accent);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  padding: 5px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.lf-share-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* PipelineRail — col 1, row 2 */
+.lf-rail {
+  grid-column: 1;
+  grid-row: 2;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+
+/* Stage — col 2, row 2 */
+.lf-stage {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 0),
+    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 0);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+/* Inspector — col 3, row 2 */
+.lf-inspector {
+  grid-column: 3;
+  grid-row: 2;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+}
+
+/* Console — spans all cols, row 3 */
+.lf-console {
+  grid-column: 1 / 4;
+  grid-row: 3;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 0;
+  height: 44px;
+  overflow: hidden;
+}
+
+.lf-console__stats {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.lf-console__stat-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.lf-console__sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line-strong);
+  margin: 0 12px;
+  flex-shrink: 0;
+}
+
+.lf-console__toggles {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.lf-console__toggle-wrap {
+  display: flex;
+  align-items: center;
+}
+
+/* Override Toggle label direction for the inline console row */
+.lf-console__toggle-wrap .lf-control {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+}
+
+.lf-console__toggle-wrap .lf-control__label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  order: -1;
+}
+
+.lf-console__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.lf-console__btn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius);
+  padding: 4px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.lf-console__btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--line-strong);
+}
+
+.lf-console__btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* SVG button — accent fill */
+.lf-console__btn--svg {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--text-on-accent);
+}
+
+.lf-console__btn--svg:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: transparent;
+}
+
+/* G-code button — blue fill */
+.lf-console__btn--gcode {
+  background: var(--color-gcode);
+  border-color: transparent;
+  color: var(--text-on-accent);
+}
+
+.lf-console__btn--gcode:hover:not(:disabled) {
+  background: var(--color-gcode-hover);
+  border-color: transparent;
+}
+
+/* Plot button — accent outline */
+.lf-console__btn--plot {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lf-console__btn--plot:hover:not(:disabled) {
+  background: var(--accent-glow);
+}
+
+/* Plot button — active state (drawer open) */
+.lf-console__btn--plot-active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* === Inspector panel (col 3, row 2) === */
+
+/* Inner head: node name + description */
+.lf-inspector__head {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lf-inspector__name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.lf-inspector__desc {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* Empty / error state */
+.lf-inspector__empty {
+  padding: 20px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* === Motif section === */
+
+.lf-motif {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lf-motif__label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.lf-motif__row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.lf-motif__btn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lf-motif__btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.lf-motif__btn--clear {
+  color: var(--text-muted);
+}
+
+.lf-motif__btn--clear:hover {
+  color: var(--err);
+  border-color: var(--err);
+  background: var(--bg-raised);
+}
+
+/* Filename chip when a motif is loaded */
+.lf-motif__chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  font-size: 11px;
+  overflow: hidden;
+}
+
+.lf-motif__filename {
+  color: var(--ok);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.lf-motif__meta {
+  color: var(--text-muted);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.lf-motif__error {
+  font-size: 11px;
+  color: var(--err);
+  line-height: 1.4;
+}
+
+/* === PipelineRail nodes === */
+
+/* Node card */
+.lf-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: 0 8px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  position: relative;
+}
+
+.lf-node:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-hover);
+}
+
+/* Selected state — accent ring */
+.lf-node--selected {
+  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--accent);
+}
+
+/* Source node accent */
+.lf-node--source {
+  margin-top: 12px;
+}
+
+/* Disabled (muted) layer */
+.lf-node--disabled {
+  opacity: 0.45;
+}
+
+/* Diamond icon for source */
+.lf-node__icon {
+  font-size: 14px;
+  color: var(--accent);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Node info: name + tag */
+.lf-node__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Node name text */
+.lf-node__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Group tag chip */
+.lf-node__tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Number badge for layers */
+.lf-node__badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-chrome);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Swap button (source) */
+.lf-node__swap {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.lf-node__swap:hover {
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* Action buttons cluster (layer nodes) */
+.lf-node__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Eye toggle button */
+.lf-node__eye {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  border-radius: var(--radius);
+  transition: color 0.12s ease;
+}
+
+.lf-node__eye--on {
+  color: var(--accent);
+}
+
+.lf-node__eye:hover {
+  color: var(--text-primary);
+}
+
+/* Remove button — visible on node hover */
+.lf-node__remove {
+  font-size: 14px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 3px;
+  line-height: 1;
+  border-radius: var(--radius);
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.lf-node:hover .lf-node__remove {
+  opacity: 1;
+}
+
+.lf-node__remove:hover {
+  color: var(--err);
+}
+
+/* Drag grip handle */
+.lf-node__grip {
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: grab;
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 2px 2px;
+  border-radius: var(--radius);
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.lf-node:hover .lf-node__grip {
+  opacity: 1;
+}
+
+.lf-node__grip:active {
+  cursor: grabbing;
+  color: var(--accent);
+}
+
+/* Drag-over indicator: subtle top border highlight */
+.lf-node--drag-over {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent-glow);
 }
 
-.leva-c-select {
-  background: var(--bg-input) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 4px !important;
-  color: var(--text-primary) !important;
-  padding: 3px 6px !important;
+/* Connector line between nodes */
+.lf-node__flow {
+  width: 1px;
+  height: 10px;
+  background: var(--line-strong);
+  margin: 0 auto;
+  position: relative;
+  left: 0;
 }
 
-.leva-c-checkbox {
-  accent-color: var(--accent) !important;
+/* Add Layer button row */
+.lf-rail__add {
+  position: relative;
+  padding: 10px 8px 12px;
+}
+
+.lf-rail__add-btn {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.lf-rail__add-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* Add menu popover */
+.lf-addmenu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-raised) - 1);
+}
+
+.lf-addmenu {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% - 2px);
+  z-index: var(--z-raised);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 16px var(--shadow-overlay);
+  animation: fadeIn 0.12s ease;
+}
+
+.lf-addmenu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.lf-addmenu__item:last-child {
+  border-bottom: none;
+}
+
+.lf-addmenu__item:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+/* MachineDrawer — overlay */
+.lf-machine-drawer {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: var(--z-drawer);
+  pointer-events: none;
+}
+
+/* === MachineDrawer (Task 12) === */
+
+/* Slide-up panel anchored to bottom of viewport, above the console */
+.lf-drawer {
+  position: fixed;
+  bottom: 44px; /* sit above the 44px console bar */
+  left: 0;
+  right: 0;
+  z-index: var(--z-drawer);
+  max-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--line-strong);
+  box-shadow: 0 -4px 24px var(--shadow-overlay);
+
+  /* Slide-up entry */
+  animation: drawerSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes drawerSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* No animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .lf-drawer {
+    animation: none;
+  }
+}
+
+/* Header row */
+.lf-drawer__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+}
+
+/* Tab strip */
+.lf-drawer__tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.lf-drawer__tab {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.12s ease, border-color 0.12s ease;
+  line-height: 1;
+}
+
+.lf-drawer__tab:hover {
+  color: var(--text-secondary);
+}
+
+.lf-drawer__tab--active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+/* Connection status cluster */
+.lf-drawer__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* LED dot */
+.lf-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.lf-drawer__state-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Close button */
+.lf-drawer__close {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.lf-drawer__close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* Scrollable panel body */
+.lf-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* === GeneratorGallery === */
+
+/* Full-screen dimmed backdrop */
+.lf-gallery-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-gallery);
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+  animation: fadeIn 0.15s ease;
+}
+
+/* Slide-over panel */
+.lf-gallery {
+  width: min(860px, 95vw);
+  max-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--line-strong);
+  border-radius: calc(var(--radius) * 2);
+  box-shadow: 0 16px 64px var(--shadow-overlay);
+  overflow: hidden;
+}
+
+/* Gallery header */
+.lf-gallery__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.lf-gallery__title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.lf-gallery__close {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.lf-gallery__close:hover {
+  color: var(--text-primary);
+  border-color: var(--line-strong);
+}
+
+/* Search bar */
+.lf-gallery__search-wrap {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.lf-gallery__search {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 7px 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.lf-gallery__search:focus {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.lf-gallery__search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+/* Scrollable content area */
+.lf-gallery__content {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 8px 0 16px;
+}
+
+/* Empty state */
+.lf-gallery__empty {
+  padding: 32px 24px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Group section */
+.lf-gallery__section {
+  padding: 12px 16px 4px;
+}
+
+.lf-gallery__section-title {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* Card grid */
+.lf-gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+/* Individual generator card */
+.lf-gallery__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  text-align: center;
+}
+
+.lf-gallery__card:hover {
+  background: var(--bg-hover);
+  border-color: var(--line-strong);
+}
+
+.lf-gallery__card--highlighted {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.lf-gallery__card--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), inset 0 0 0 1px var(--accent-glow);
+  background: var(--bg-hover);
+}
+
+/* Thumbnail wrapper — square with paper bg */
+.lf-gallery__thumb-wrap {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--bg-paper);
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.lf-gallery__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Placeholder icon for generators without a render (motif-dependent) */
+.lf-gallery__thumb-placeholder {
+  font-size: 24px;
+  color: var(--accent);
+  opacity: 0.4;
+}
+
+/* Card label */
+.lf-gallery__card-name {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  word-break: break-word;
 }
