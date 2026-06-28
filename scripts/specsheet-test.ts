@@ -65,6 +65,16 @@ useApp.getState().setMotif(null);
       assert.ok(x <= ix1 + 0.5, `point right of inner margin: ${x} > ${ix1}`);
     }
   }
+  // 5b. directional placement: the leftmost row point sits at the inner-left margin
+  //     (label anchored left), the rightmost at the inner-right margin (value anchored
+  //     right). Catches a regression that centered label+value instead of justifying them.
+  {
+    const rowXs = rowPolylines.flatMap((l) => l.points.map(([x]) => x));
+    const minX = Math.min(...rowXs);
+    const maxX = Math.max(...rowXs);
+    assert.ok(Math.abs(minX - ix0) <= 1.0, `label should anchor at inner-left margin: minX=${minX}, ix0=${ix0}`);
+    assert.ok(Math.abs(maxX - ix1) <= 1.0, `value should anchor at inner-right margin: maxX=${maxX}, ix1=${ix1}`);
+  }
 }
 // 6. leader present: a label+value row has polylines in the x-band between them.
 //    A row with a long value (small gap) has fewer/zero leader dots than a short value.
