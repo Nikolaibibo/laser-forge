@@ -1,4 +1,18 @@
-import type { Schema } from "leva/dist/declarations/src/types";
+export type ControlDef = {
+  value: unknown;
+  min?: number;
+  max?: number;
+  step?: number;
+  options?: ReadonlyArray<string | number>;
+  rows?: number;
+  /** Conditional visibility. `get(key)` resolves the field after the last dot. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  render?: (get: (key: string) => any) => boolean;
+  label?: string;
+  hint?: string;
+};
+
+export type ControlSchema = Record<string, ControlDef>;
 
 export type Point = [number, number];
 
@@ -21,7 +35,7 @@ export type GeneratorDef<P extends Record<string, unknown> = Record<string, unkn
   name: string;
   description: string;
   defaults: P;
-  schema: Schema;
+  schema: ControlSchema;
   generate: (params: P, seed: number, canvas: Canvas) => Artwork;
 };
 
@@ -34,6 +48,6 @@ export type DistortionDef<P extends Record<string, unknown> = Record<string, unk
   name: string;
   description: string;
   defaults: P;
-  schema: Schema;
+  schema: ControlSchema;
   apply: (artwork: Artwork, params: P, seed: number) => Artwork;
 };
