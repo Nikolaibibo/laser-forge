@@ -659,6 +659,137 @@ input, select, textarea, button {
   grid-row: 3;
   background: var(--bg-panel);
   border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 0;
+  height: 44px;
+  overflow: hidden;
+}
+
+.lf-console__stats {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.lf-console__stat-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.lf-console__sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line-strong);
+  margin: 0 12px;
+  flex-shrink: 0;
+}
+
+.lf-console__toggles {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.lf-console__toggle-wrap {
+  display: flex;
+  align-items: center;
+}
+
+/* Override Toggle label direction for the inline console row */
+.lf-console__toggle-wrap .lf-control {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+}
+
+.lf-console__toggle-wrap .lf-control__label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  order: -1;
+}
+
+.lf-console__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.lf-console__btn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius);
+  padding: 4px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.lf-console__btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--line-strong);
+}
+
+.lf-console__btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* SVG button — accent fill */
+.lf-console__btn--svg {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--text-on-accent);
+}
+
+.lf-console__btn--svg:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: transparent;
+}
+
+/* G-code button — blue fill */
+.lf-console__btn--gcode {
+  background: #3a7ae9;
+  border-color: transparent;
+  color: #fff;
+}
+
+.lf-console__btn--gcode:hover:not(:disabled) {
+  background: #4f8ff0;
+  border-color: transparent;
+}
+
+/* Plot button — accent outline */
+.lf-console__btn--plot {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lf-console__btn--plot:hover:not(:disabled) {
+  background: var(--accent-glow);
+}
+
+/* Plot button — active state (drawer open) */
+.lf-console__btn--plot-active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* === Inspector panel (col 3, row 2) === */

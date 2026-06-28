@@ -61,6 +61,15 @@ export type AppState = {
   /** Controls the generator-gallery overlay (Task 10). */
   galleryOpen: boolean;
   setGalleryOpen: (v: boolean) => void;
+  /** Dedupe overlapping paths before export (shared between Console + MachineDrawer). */
+  dedupe: boolean;
+  setDedupe: (v: boolean) => void;
+  /** Join open polylines whose endpoints touch before export. */
+  join: boolean;
+  setJoin: (v: boolean) => void;
+  /** Controls the machine/plotter drawer (Task 12). */
+  drawerOpen: boolean;
+  setDrawerOpen: (v: boolean) => void;
 };
 
 let uidCounter = 0;
@@ -133,4 +142,10 @@ export const useApp = create<AppState>((set) => ({
   setCurrentArtwork: (a) => set({ currentArtwork: a }),
   galleryOpen: false,
   setGalleryOpen: (v) => set({ galleryOpen: v }),
+  dedupe: false,
+  setDedupe: (v) => set({ dedupe: v }),
+  join: false,
+  setJoin: (v) => set({ join: v }),
+  drawerOpen: false,
+  setDrawerOpen: (v) => set({ drawerOpen: v }),
 }));
