@@ -26,7 +26,7 @@ export function Console() {
       {/* Left: geometry stats */}
       <div className="lf-console__stats">
         <span className="lf-console__stat-text">
-          {lineCount} lines · {pointCount.toLocaleString("en-US")} pts · ~{estPlotMinutes}m
+          {lineCount.toLocaleString("en-US")} lines · {pointCount.toLocaleString("en-US")} pts{hasArtwork ? ` · ~${estPlotMinutes}m` : ""}
         </span>
       </div>
 
@@ -86,6 +86,7 @@ export function Console() {
               : "lf-console__btn lf-console__btn--plot"
           }
           disabled={!hasArtwork}
+          aria-pressed={drawerOpen}
           onClick={() => setDrawerOpen(!drawerOpen)}
         >
           ▸ Plot

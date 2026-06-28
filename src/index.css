@@ -38,6 +38,8 @@
   --accent: #f97316;             /* laser-orange */
   --text-on-accent: #ffffff;     /* text/marks rendered on accent-coloured surfaces */
   --accent-hover: #fb8a3c;
+  --color-gcode: #3a7ae9;        /* G-code button blue */
+  --color-gcode-hover: #4f8ff0;
   --accent-glow: rgba(249, 115, 22, 0.16);
   --ok: #3fb950;
   --err: #f85149;
@@ -764,13 +766,13 @@ input, select, textarea, button {
 
 /* G-code button — blue fill */
 .lf-console__btn--gcode {
-  background: #3a7ae9;
+  background: var(--color-gcode);
   border-color: transparent;
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 .lf-console__btn--gcode:hover:not(:disabled) {
-  background: #4f8ff0;
+  background: var(--color-gcode-hover);
   border-color: transparent;
 }
 
