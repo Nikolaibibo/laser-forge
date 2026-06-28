@@ -1,5 +1,8 @@
 # Laser Forge UI Redesign ("Signal Chain") Implementation Plan
 
+> **STATUS: DONE — merged as commit 97339e6 on 2026-06-28.**
+> The checkboxes below were not kept in sync during implementation and remain unchecked, but all work is complete and in main. This plan is archived for reference only.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the organically-grown Laser Forge UI with a cohesive CAD/technical "Signal Chain" interface (generator + distortions = one selectable node chain), custom schema-driven controls, and a searchable preview-driven generator gallery — removing the Leva dependency.

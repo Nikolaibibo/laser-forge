@@ -18,6 +18,19 @@ Beide folgen demselben Muster:
 
 `src/generators/rose.ts` ist das beste Referenzbeispiel — saubere parametrische Kurve mit Variant-Switch.
 
+### Distortions (Stand: Juni 2026)
+
+Aktuelle Liste aus `src/distortions/registry.ts`:
+
+| Id | Name | Was es tut |
+|----|------|-----------|
+| `noise-warp` | Noise Warp | Punkt-für-Punkt Verschiebung entlang Simplex-Noise-Feld |
+| `chaikin` | Chaikin Smooth | Rekursives Corner-Cutting |
+| `kaleidoscope` | Radial Kaleidoscope | N-fache Rotationskopien → Mandala |
+| `text-knockout` | Text Knockout | Text als Negativfläche ins Artwork schneiden; nutzt Hershey-Fonts und Occlusion-Engine (`src/util/occlusion.ts`) |
+| `rotate` | Rotate Page | Viertelschritt-Rotation des ganzen Artworks inkl. Seiten-Abmessungen; 90/270 tauschen `widthMm`/`heightMm` |
+| `path-join` | Path Join | Verkettet offene Polylinien an gemeinsamen Endpunkten zu langen Pfaden (weniger Stift-Absetzer); Kern in `src/util/mergePaths.ts` |
+
 ### Generator-Klassen (Stand: Juni 2026)
 
 Aktuelle, vollständige Liste immer aus `registry.ts` lesen — NICHT aus diesem Doc.
