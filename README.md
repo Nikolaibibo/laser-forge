@@ -22,7 +22,10 @@ Ein Basis-Generator erzeugt ein Artwork (Polylines in mm). Optional läuft das
 Artwork durch eine Pipeline aus Distortion-Layern. Alles ist
 **seed-deterministisch** und **shareable** via URL-Hash.
 
-## Basis-Generatoren (10)
+## Basis-Generatoren
+
+Vollständige, aktuelle Liste: **`src/generators/registry.ts`** (Single Source of
+Truth). Auswahl der „Laser"-Gruppe:
 
 | Name | Charakter |
 |------|-----------|
@@ -34,8 +37,20 @@ Artwork durch eine Pipeline aus Distortion-Layern. Alles ist
 | **Truchet** | Tile-Grid mit Smith-Bögen oder Diagonalen, maze-artig |
 | **Strange Attractor** | Clifford / De Jong / Svensson, chaotisches Garngewebe |
 | **Voronoi / Delaunay** | Zellstrukturen aus Poisson-Disk-Sampling |
+| **Voronoi Moiré** | Zwei Hatch-Lagen mit Winkel-Offset → Moiré, zwei Stifte |
+| **Contours / Topographic** | Marching-Squares-Isolinien über ein Feld (noise/ripple/waves/quasicrystal) |
+| **String Art / Modular** | Sehnen am Kreis, Hüllkurve = Kurve (Kardioide, Sternpolygone) |
+| **TSP Art / Stippling** | Bild → gewichtetes Stippling → eine durchgehende Linie (2-opt) |
+| **Ridgeline / Joy Division** | Gestapelte Höhenprofile mit Hidden-Line-Removal |
 | **L-System** | Koch, Dragon, Plant, Sierpinski, Hilbert |
 | **Differential Growth** | Anders-Hoff-artige organische Ringe |
+
+Dazu **Space-Filling Curve** (Hilbert/Moore/Gosper/Dragon/Sierpiński, ein Strich)
+in der Pen-Plotter-Gruppe sowie die Pen-Plotter- (pipes/ribbons/loops/folds/text),
+Pattern-, Layout- und Import-Generatoren — siehe `registry.ts`.
+
+**Input-getrieben:** `TSP Art` liest ein hochgeladenes Bild (IMAGE-Block im
+Inspector), die Layout-/Pattern-Generatoren ein importiertes SVG (MOTIF-Block).
 
 ## Distortions (3)
 
@@ -68,12 +83,13 @@ npm run build
 
 ```
 src/
-  generators/     # Basis-Generatoren (pure functions)
+  generators/     # Basis-Generatoren (pure functions; einige lesen Store-Input)
   distortions/    # Distortion-Layer (Artwork → Artwork)
+  plotter/        # GRBL (gcode) + AxiDraw-Bridge-Client + penSplit (Multi-Pen)
   render/         # Canvas-Preview + SVG-Export
-  state/          # Zustand-Store + URL-Hash-Sync
-  ui/             # Sidebar, LayerStack, Leva-Panel, Export-Bar
-  util/           # Seeded PRNG, Simplex-Noise, Polyline-Ops
+  state/          # Zustand-Store + URL-Hash-Sync (motif + sourceImage)
+  ui/             # Sidebar, Inspector, Pipeline, Console, Machine-Panels
+  util/           # Seeded PRNG, Simplex-Noise, Polyline-Ops, imageLoad
 ```
 
 **Neue Basis-Form hinzufügen:** File in `src/generators/`, in
@@ -86,20 +102,38 @@ automatisch dran.
 ## Scripts
 
 ```bash
-npx tsx scripts/smoke.mjs          # Alle Generatoren + Distortions testen
-npx tsx scripts/test-dedupe.mjs    # Path-Dedupe-Unit-Tests
-npx tsx scripts/export-test.mjs    # Sample-SVGs nach /tmp/laser-forge-samples/
+npx tsx scripts/smoke.mjs                 # Alle Generatoren + Distortions testen
+npx tsx scripts/<name>-test.ts            # Pro-Generator-Test (z.B. tsp-art-test.ts)
+npx tsx scripts/render-demo.ts <id> <seed> <out.svg> [canvas=WxH] [pen=mm] [k=v]
+npx tsx scripts/test-dedupe.mjs           # Path-Dedupe-Unit-Tests
 npm run typecheck
 ```
 
+## Plotten (AxiDraw)
+
+Die App spricht direkt mit einem lokalen Bridge-Server (`bridge/bridge.py`, treibt
+`axicli`). Am komfortabelsten läuft das auf der **gimbal-Pi Plot-Station** unter
+`http://gimbal.local:4760/` — der Pi serviert App + Bridge-API auf einem Port, der
+Plot läuft autonom ohne Mac. Stift-Profile, Speed/Accel, Pen-Settle-Delays und
+**Plot je Farbe** (Multi-Pen, ein Pass pro `stroke`-Farbe) im AxiDraw-Panel.
+Setup-Details: `bridge/README.md` + `docs/superpowers/specs/2026-06-24-pi-axidraw-plot-station-design.md`.
+
 ## Deploy
 
+Zwei getrennte Ziele:
+
 ```bash
+# 1) Plot-Station (primär): App auf den Pi (Frontend-only, kein Restart nötig)
+npm run build
+rsync -az --delete dist/ nikolai@gimbal.local:~/laser-forge-bridge/dist/
+
+# 2) Öffentliches Hosting (ohne Bridge/Plotten)
 npm run build
 firebase deploy --only hosting --project laser-forge-nb
 ```
 
-Hosting läuft unter `nikolaibibo@gmail.com` (nicht der GoMedicus-Account).
+Firebase-Hosting läuft unter dem privaten Account `nikolaibibo@gmail.com` (nicht
+der GoMedicus-Account). Details für beide Wege: `CLAUDE.md`.
 
 ## Referenzen
 

@@ -18,6 +18,17 @@ Beide folgen demselben Muster:
 
 `src/generators/rose.ts` ist das beste Referenzbeispiel — saubere parametrische Kurve mit Variant-Switch.
 
+### Generator-Klassen (Stand: Juni 2026)
+
+Aktuelle, vollständige Liste immer aus `registry.ts` lesen — NICHT aus diesem Doc.
+
+- **Pure** (Default): `generate(params, seed, canvas)` ohne Außenwelt. Mehrheit der Generatoren.
+- **Store-lesend (input-driven):** manche lesen den Zustand-Store direkt via `useApp.getState()`:
+  - `motif` — importiertes **Vektor**-SVG (Consumers: blueprint, specsheet, patternMaker, svg). Liste = `MOTIF_CONSUMERS` im Inspector.
+  - `sourceImage` — importiertes **Raster**-Bild als Luminanz-Gitter (Consumer: `tspArt`). Liste = `IMAGE_CONSUMERS` im Inspector. Decode passiert in `src/util/imageLoad.ts` via `<canvas>` → **browser-only**. Bild-getriebene Generatoren MÜSSEN einen prozeduralen Fallback haben, sonst sind sie headless (tsx-Tests/render-demo) nicht renderbar (siehe `proceduralField` in `tspArt.ts`).
+- **Mehrfarbig / Multi-Pen:** `Polyline.stroke` trägt eine Pro-Stift-Farbe. Ein Artwork kann mehrere Farben enthalten (z.B. `voronoiMoire` = zwei Hatch-Lagen). `src/plotter/penSplit.ts` (`splitByStroke`) teilt nach Farbe → der Plotter fährt eine Lage pro Stift.
+- **Geometrie-Wiederverwendung:** d3-delaunay (Voronoi/Delaunay), Konvex-Hatch + Sutherland-Hodgman-Inset in `voronoiMoire.ts`, Marching-Squares + Stitch in `contours.ts` (feld-agnostisch — neue Felder = neue Effekte), L-System-Turtle in `spaceFilling.ts`.
+
 ## Konventionen
 
 - **Einheit ist mm.** Alle Koordinaten, Margins, Toleranzen sind in mm.
@@ -27,17 +38,59 @@ Beide folgen demselben Muster:
 
 ## Testing
 
-Es gibt **kein Test-Framework** (kein Vitest, kein Jest). Tests sind Node-Scripts unter `scripts/`, ausgeführt mit `npx tsx scripts/<name>.mjs`. Bei Assertion-Fehler `process.exit(1)`. Pattern: siehe `scripts/test-dedupe.mjs` (Assertion-Helper + 12 Tests) und `scripts/smoke.mjs` (Generator-Iteration).
+Es gibt **kein Test-Framework** (kein Vitest, kein Jest). Tests sind Node-Scripts unter `scripts/`, ausgeführt mit `npx tsx scripts/<name>`. Sowohl `.mjs` (ältere, mit `node:assert`/eigenem Helper) als auch `.ts` (neuere, `import assert from "node:assert/strict"`) — beide laufen über `tsx`. Bei Assertion-Fehler wirft/exit≠0. Referenz: `scripts/test-dedupe.mjs` (Helper-Stil) und z.B. `scripts/voronoi-moire-test.ts` / `scripts/tsp-art-test.ts` (Generator-Stil: Dimensionen, Determinismus, Geometrie-Invarianten, Clamping).
 
-Wenn du Tests für ein neues Feature schreibst: füge sie als eigenes Script in diesem Stil hinzu. Smoke testet alle Generatoren automatisch, du musst nichts dort ergänzen.
+Konvention: **jeder neue Generator bekommt ein eigenes `scripts/<name>-test.ts`.** `scripts/smoke.mjs` iteriert zusätzlich alle Generatoren automatisch — dort musst du nichts ergänzen. Vor Commit immer `npx tsc -b --noEmit`.
 
-## Deploy
+**Headless-Renders zum Ästhetik-Check:** `npx tsx scripts/render-demo.ts <genId> <seed> <out.svg> [canvas=WxH] [pen=mm] [k=v …]` → SVG, dann `rsvg-convert -b white -w 700 out.svg -o out.png`. Param-Overrides werden gegen die Defaults gecoerct; `pen=` setzt die Export-Strichbreite (kein Generator-Param). Bild-getriebene Generatoren rendern headless nur mit prozeduraler Quelle (kein `<canvas>`-Decode in Node).
 
-Firebase Hosting auf Projekt `laser-forge-nb`. **Wichtig:** Das Projekt gehört dem privaten Account `nikolaibibo@gmail.com`, NICHT `nikolai@gomedicusgroup.com`. Vor jedem Deploy `firebase login:list` checken — der GoMedicus-Account hat keinen Zugriff und der Deploy schlägt fehl.
+## Deploy — ZWEI getrennte Ziele
 
-```bash
-npm run build && firebase deploy --only hosting --project laser-forge-nb
-```
+1. **gimbal-Pi Plot-Station** (primär fürs Plotten) — `http://gimbal.local:4760/`.
+   Der Pi läuft `bridge/bridge.py` als systemd-Service `laser-forge-bridge.service`
+   und serviert die gebaute App (`dist/`) auf demselben Port (same-origin → kein
+   Mixed-Content, Plotten geht direkt vom Pi). **Kein git-Clone auf dem Pi** —
+   ein flaches Verzeichnis `/home/nikolai/laser-forge-bridge/` mit `bridge.py` +
+   `dist/`. Deploy = Dateien rüberkopieren (SSH-User `nikolai`, alle Heim-Pis
+   gleiches Passwort):
+   ```bash
+   npm run build
+   rsync -az --delete dist/ nikolai@gimbal.local:~/laser-forge-bridge/dist/
+   ```
+   `dist/` wird pro Request frisch gelesen → **reiner Frontend-Deploy braucht
+   KEINEN Service-Restart.** Nur bei Python-Änderungen an `bridge.py`:
+   ```bash
+   scp bridge/bridge.py nikolai@gimbal.local:~/laser-forge-bridge/bridge.py
+   ssh nikolai@gimbal.local 'sudo systemctl restart laser-forge-bridge.service'
+   ```
+   Vor dem Überschreiben von `bridge.py` einmal gegen die Repo-Version diffen —
+   die Pi-Version soll byte-identisch sein (Host/Port kommen aus systemd-Env-Vars,
+   nicht aus Code-Patches).
+
+2. **Firebase Hosting** (öffentlich, OHNE Bridge/Plotten) — https://laser-forge-nb.web.app
+   Projekt `laser-forge-nb` unter dem PRIVATEN Account `nikolaibibo@gmail.com`
+   (NICHT GoMedicus). `firebase login:list` checken, sonst schlägt der Deploy fehl.
+   Diesen Deploy macht Nikolai i.d.R. **manuell**:
+   ```bash
+   npm run build && firebase deploy --only hosting --project laser-forge-nb
+   ```
+
+## AxiDraw-Bridge (Plotten)
+
+`bridge/bridge.py` = lokaler HTTP-Server, der `axicli` (pyaxidraw) treibt.
+TS-Client `src/plotter/axidrawBridge.ts`, UI `src/ui/AxiDrawPanel.tsx`. Pendant
+für GRBL/WebSerial = `src/ui/PlotterPanel.tsx`.
+
+- Läuft am Mac (für `npm run dev` auf Port 5173/4173 → Bridge auf `127.0.0.1:4760`)
+  ODER auf dem gimbal-Pi (serviert dort auch die App, same-origin). Base-URL-Logik
+  in `axidrawBridge.ts`.
+- Stift-**Profile** (pencil/felt/gel) + Override-Query-Params: `speed`, `accel`,
+  `delay_down`/`delay_up` (Pen-Settle in ms). Clone = model 6, invertierter Servo,
+  voller Hub — `PROFILES` + Kommentare in `bridge.py` NICHT ohne Hardware-Test ändern.
+- **Plot je Farbe** (Multi-Pen): `splitByStroke` teilt nach `Polyline.stroke`,
+  plottet eine Lage pro Farbe, Pen-up + `confirm`-Dialog für den Stiftwechsel
+  zwischen den Lagen, Origin bleibt erhalten (kein Re-Home). In `AxiDrawPanel`
+  und `PlotterPanel` gespiegelt.
 
 ## Git
 
