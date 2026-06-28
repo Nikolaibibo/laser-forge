@@ -25,6 +25,12 @@ export type AppState = {
   layers: Layer[];
   /** Parameter values per layer (written by LayerControls). */
   layerParams: Record<string, Record<string, unknown>>;
+  /** Parameter values per generator id (mirror of layerParams for the source node). */
+  genParams: Record<string, Record<string, unknown>>;
+  setGenParams: (genId: string, params: Record<string, unknown>) => void;
+  /** Which chain node the Inspector edits: "source" or a layer uid. */
+  selectedNodeId: string;
+  setSelectedNode: (id: string) => void;
   setGenerator: (id: string) => void;
   setSeed: (seed: number) => void;
   randomSeed: () => void;
@@ -63,21 +69,31 @@ export const useApp = create<AppState>((set) => ({
   penWidthMm: 0.3,
   layers: [],
   layerParams: {},
-  setGenerator: (id) => set({ generatorId: id }),
+  genParams: {},
+  selectedNodeId: "source",
+  setGenParams: (genId, params) =>
+    set((s) => ({ genParams: { ...s.genParams, [genId]: params } })),
+  setSelectedNode: (id) => set({ selectedNodeId: id }),
+  setGenerator: (id) => set({ generatorId: id, selectedNodeId: "source" }),
   setSeed: (seed) => set({ seed }),
   randomSeed: () => set({ seed: Math.floor(Math.random() * 1_000_000) }),
   setCanvas: (w, h) => set({ canvasWMm: w, canvasHMm: h }),
   setPenWidthMm: (mm) => set({ penWidthMm: Math.max(0.05, mm) }),
   addLayer: (distortionId) =>
-    set((s) => ({
-      layers: [...s.layers, { uid: nextUid(), distortionId, enabled: true }],
-    })),
+    set((s) => {
+      const uid = nextUid();
+      return {
+        layers: [...s.layers, { uid, distortionId, enabled: true }],
+        selectedNodeId: uid,
+      };
+    }),
   removeLayer: (uid) =>
     set((s) => {
       const next = s.layers.filter((l) => l.uid !== uid);
       const params = { ...s.layerParams };
       delete params[uid];
-      return { layers: next, layerParams: params };
+      const selectedNodeId = s.selectedNodeId === uid ? "source" : s.selectedNodeId;
+      return { layers: next, layerParams: params, selectedNodeId };
     }),
   toggleLayer: (uid) =>
     set((s) => ({
@@ -95,7 +111,7 @@ export const useApp = create<AppState>((set) => ({
     }),
   setLayerParams: (uid, params) =>
     set((s) => ({ layerParams: { ...s.layerParams, [uid]: params } })),
-  clearLayers: () => set({ layers: [], layerParams: {} }),
+  clearLayers: () => set({ layers: [], layerParams: {}, selectedNodeId: "source" }),
   motif: null,
   setMotif: (m) => set({ motif: m }),
   hydrate: (s) => set(s),
