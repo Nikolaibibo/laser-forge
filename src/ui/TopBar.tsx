@@ -1,6 +1,12 @@
 import { useApp } from "../state/store";
 import { writeHash } from "../state/urlSync";
 
+const clamp = (v: number) =>
+  Number.isFinite(v) ? Math.min(1000, Math.max(10, v)) : 10;
+
+const clampPen = (v: number) =>
+  Number.isFinite(v) ? Math.max(0.05, v) : 0.05;
+
 export function TopBar() {
   const w = useApp((s) => s.canvasWMm);
   const h = useApp((s) => s.canvasHMm);
@@ -14,8 +20,6 @@ export function TopBar() {
   const layers = useApp((s) => s.layers);
   const layerParams = useApp((s) => s.layerParams);
   const genParams = useApp((s) => s.genParams);
-
-  const clamp = (v: number) => Math.min(1000, Math.max(10, v));
 
   function handleShare() {
     writeHash({
@@ -47,7 +51,10 @@ export function TopBar() {
             value={w}
             min={10}
             max={1000}
-            onChange={(e) => setCanvas(Number(e.target.value), h)}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v) && v > 0) setCanvas(v, h);
+            }}
             onBlur={(e) => setCanvas(clamp(Number(e.target.value)), h)}
           />
         </label>
@@ -60,7 +67,10 @@ export function TopBar() {
             value={h}
             min={10}
             max={1000}
-            onChange={(e) => setCanvas(w, Number(e.target.value))}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v) && v > 0) setCanvas(w, v);
+            }}
             onBlur={(e) => setCanvas(w, clamp(Number(e.target.value)))}
           />
         </label>
@@ -78,7 +88,11 @@ export function TopBar() {
             min={0.05}
             max={5}
             step={0.05}
-            onChange={(e) => setPenWidthMm(Number(e.target.value))}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v) && v > 0) setPenWidthMm(v);
+            }}
+            onBlur={(e) => setPenWidthMm(clampPen(Number(e.target.value)))}
           />
         </label>
         <span className="lf-unit-label">mm</span>

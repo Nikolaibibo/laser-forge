@@ -32,7 +32,10 @@ function Stage() {
   const layerParams = useApp((s) => s.layerParams);
   const genParams = useApp((s) => s.genParams);
   const motif = useApp((s) => s.motif);
-  const baseParams = genParams[generatorId] ?? schemaDefaults(gen.schema);
+  const baseParams = useMemo(
+    () => genParams[generatorId] ?? schemaDefaults(gen.schema),
+    [genParams, generatorId, gen.schema],
+  );
 
   const baseArt = useMemo(
     () => gen.generate(baseParams, seed, { wMm: w, hMm: h }),
