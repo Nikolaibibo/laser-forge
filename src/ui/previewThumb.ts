@@ -5,6 +5,11 @@
 import type { GeneratorDef } from "../generators/types";
 import { schemaDefaults } from "./controls/schema";
 
+// Canvas 2D can't consume CSS vars, so we define constants here that mirror
+// --bg-paper (#fafaf7) and a dark ink tone close to --text-primary (#111827).
+const THUMB_BG = "#fafaf7";
+const THUMB_STROKE = "#111827";
+
 /** Module-level memoization cache: gen.id → data URL. */
 const cache = new Map<string, string>();
 
@@ -32,7 +37,7 @@ export function artworkToThumbDataUrl(gen: GeneratorDef, size: number): string {
     }
 
     // Bright paper background
-    ctx.fillStyle = "#fafaf7";
+    ctx.fillStyle = THUMB_BG;
     ctx.fillRect(0, 0, size, size);
 
     if (artwork.polylines.length > 0 && artwork.widthMm > 0 && artwork.heightMm > 0) {
@@ -62,7 +67,7 @@ export function artworkToThumbDataUrl(gen: GeneratorDef, size: number): string {
 
       for (const line of artwork.polylines) {
         if (line.points.length < 2) continue;
-        ctx.strokeStyle = line.stroke ?? "#111";
+        ctx.strokeStyle = line.stroke ?? THUMB_STROKE;
         ctx.beginPath();
         ctx.moveTo(line.points[0][0], line.points[0][1]);
         for (let i = 1; i < line.points.length; i++) {

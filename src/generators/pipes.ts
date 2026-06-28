@@ -187,8 +187,7 @@ export const pipes: GeneratorDef<Params> = {
     colorFraction: { value: DEFAULTS.colorFraction, min: 0, max: 1, step: 0.05 },
     colorStrategy: { value: DEFAULTS.colorStrategy, options: ["largestFirst", "random"] },
     colorCount: { value: DEFAULTS.colorCount, min: 1, max: 6, step: 1 },
-    // Picker slots above colorCount are hidden (leva render hook; keys are
-    // namespaced by the folder name = generator name).
+    // Color slots above colorCount are hidden via the schema render() predicate.
     color1: { value: DEFAULTS.color1 },
     color2: { value: DEFAULTS.color2, render: (get) => get("Truchet Pipes.colorCount") >= 2 },
     color3: { value: DEFAULTS.color3, render: (get) => get("Truchet Pipes.colorCount") >= 3 },

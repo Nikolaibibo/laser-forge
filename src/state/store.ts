@@ -24,7 +24,7 @@ export type AppState = {
   /** Pen stroke width in mm — preview + SVG export (0.3 fineliner … 1–2 felt-tip). */
   penWidthMm: number;
   layers: Layer[];
-  /** Parameter values per layer (written by LayerControls). */
+  /** Parameter values per layer (written by Inspector). */
   layerParams: Record<string, Record<string, unknown>>;
   /** Parameter values per generator id (mirror of layerParams for the source node). */
   genParams: Record<string, Record<string, unknown>>;

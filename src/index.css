@@ -27,6 +27,7 @@
   --bg-raised: #1c222b;
   --bg-hover: #232a34;
   --bg-canvas: #f7f8fa;          /* the plotter "bed" stays bright */
+  --bg-paper: #fafaf7;           /* off-white thumbnail / paper bed */
 
   --line: #2a313b;               /* 1px hairlines */
   --line-strong: #39424f;
@@ -100,10 +101,10 @@ input, select, textarea, button {
 }
 
 /* Micro-animations */
-/* NOTE: opacity-only on purpose. This fade is applied to the draggable
-   ExportBar, whose position is driven by an inline `transform`. A keyframe
-   that also animates `transform` (with fill-mode: forwards) would override
-   that inline transform and freeze the panel — breaking the drag. */
+/* NOTE: opacity-only on purpose. This fade is used by overlay panels
+   (gallery, console slide-ins). A keyframe that also animates `transform`
+   (with fill-mode: forwards) would conflict with panels whose position is
+   driven by an inline transform. */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -1161,7 +1162,7 @@ input, select, textarea, button {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px var(--shadow-overlay);
   animation: fadeIn 0.12s ease;
 }
 
@@ -1354,7 +1355,7 @@ input, select, textarea, button {
   background: var(--bg-panel);
   border: 1px solid var(--line-strong);
   border-radius: calc(var(--radius) * 2);
-  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 64px var(--shadow-overlay);
   overflow: hidden;
 }
 
@@ -1503,7 +1504,7 @@ input, select, textarea, button {
 .lf-gallery__thumb-wrap {
   width: 100%;
   aspect-ratio: 1;
-  background: #fafaf7;
+  background: var(--bg-paper);
   border-radius: 2px;
   overflow: hidden;
   display: flex;

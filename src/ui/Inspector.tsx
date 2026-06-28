@@ -1,6 +1,6 @@
 // src/ui/Inspector.tsx — right-side panel; renders schema-driven controls
 // for whichever node is selected in the signal chain ("source" or a layer uid).
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useApp } from "../state/store";
 import { byId } from "../generators/registry";
 import { distortionById } from "../distortions/registry";
@@ -24,6 +24,9 @@ export function Inspector() {
 
   const [motifError, setMotifError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Clear stale parse-error when the user switches to a different generator.
+  useEffect(() => { setMotifError(null); }, [generatorId]);
 
   const isSource = selectedNodeId === "source";
 
@@ -91,7 +94,7 @@ export function Inspector() {
               {motif && (
                 <button
                   className="lf-motif__btn lf-motif__btn--clear transition-all-fast"
-                  onClick={() => setMotif(null)}
+                  onClick={() => { setMotif(null); setMotifError(null); }}
                   title="Clear motif"
                 >
                   Clear
@@ -112,7 +115,7 @@ export function Inspector() {
           </div>
         )}
 
-        <SchemaControls schema={schema} values={values} onChange={onChange} />
+        <SchemaControls key={selectedNodeId + ":" + generatorId} schema={schema} values={values} onChange={onChange} />
       </aside>
     );
   }
