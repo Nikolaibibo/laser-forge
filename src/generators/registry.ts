@@ -3,6 +3,9 @@ import { harmonograph } from "./harmonograph";
 import { flowField } from "./flowField";
 import { voronoi } from "./voronoi";
 import { voronoiMoire } from "./voronoiMoire";
+import { contours } from "./contours";
+import { spaceFilling } from "./spaceFilling";
+import { stringArt } from "./stringArt";
 import { lSystem } from "./lSystem";
 import { differentialGrowth } from "./differentialGrowth";
 import { superformula } from "./superformula";
@@ -24,7 +27,7 @@ import { specsheet } from "./specsheet";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GENERATOR_GROUPS: { title: string; items: GeneratorDef<any>[] }[] = [
   { title: "Import", items: [svg] },
-  { title: "Pen Plotter", items: [pipes, ribbons, loops, folds, text] },
+  { title: "Pen Plotter", items: [pipes, ribbons, loops, folds, text, spaceFilling] },
   { title: "Pattern", items: [patternMaker] },
   { title: "Layout", items: [blueprint, specsheet] },
   {
@@ -39,6 +42,8 @@ export const GENERATOR_GROUPS: { title: string; items: GeneratorDef<any>[] }[] =
       attractor,
       voronoi,
       voronoiMoire,
+      contours,
+      stringArt,
       lSystem,
       differentialGrowth,
     ],
