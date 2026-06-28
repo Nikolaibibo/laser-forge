@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { specsheet } from "../src/generators/specsheet";
 import { parseSvgMotif } from "../src/util/svgImport";
 import { useApp } from "../src/state/store";
+import { svgExport } from "../src/render/svgExport";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const canvas = { wMm: 148, hMm: 210 }; // A5 portrait
@@ -98,6 +99,30 @@ useApp.getState().setMotif(null);
     labelValue.polylines.length > labelOnly.polylines.length,
     "a value + leader add polylines vs label-only",
   );
+}
+
+// 4. empty specs → no row content, no throw
+{
+  const art = specsheet.generate({ ...P, specs: "", footer: "" }, 1, canvas);
+  assert.ok(art.polylines.length > 0, "frame + motif + title still render");
+}
+// 8. overflow: 30 rows still fit inside the canvas (fit pass scales text down)
+{
+  const many = Array.from({ length: 30 }, (_, i) => `Row ${i}: value ${i}`).join("\n");
+  const art = specsheet.generate({ ...P, specs: many }, 1, canvas);
+  for (const l of art.polylines) {
+    for (const [x, y] of l.points) {
+      assert.ok(x >= 0 && x <= 148 && y >= 0 && y <= 210, `point outside canvas: ${x},${y}`);
+    }
+  }
+}
+// 10. determinism: identical motif + params → identical svg export
+{
+  const fixture = readFileSync(join(here, "fixtures/motif-gear.svg"), "utf8");
+  useApp.getState().setMotif({ name: "gear", ...parseSvgMotif(fixture) });
+  const a = svgExport(specsheet.generate(P, 1, canvas), {});
+  const b = svgExport(specsheet.generate(P, 1, canvas), {});
+  assert.equal(a, b, "spec sheet output must be deterministic");
 }
 
 console.log("specsheet-test: all assertions passed");

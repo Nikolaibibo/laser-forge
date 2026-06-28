@@ -94,7 +94,6 @@ export const specsheet: GeneratorDef<Params> = {
   generate: (p, _seed, canvas) => {
     const out: Polyline[] = [];
     const frameStroke = p.accentTarget === "frame" ? p.accentColor : undefined;
-    const valueStroke = p.accentTarget === "value" ? p.accentColor : undefined;
     out.push(...drawFrame(canvas, p.frameInsetMm, p.cornerMarks, frameStroke));
 
     const pad = Math.max(3, Math.min(canvas.wMm, canvas.hMm) * 0.03);
@@ -110,46 +109,67 @@ export const specsheet: GeneratorDef<Params> = {
     // Motif (fixed top slot, never scaled by the fit pass).
     out.push(...placeMotif({ x: ix0, y: iy0, w: maxW, h: slotH }, p.motifScale, p.motifRotation));
 
-    // Title under the motif slot, with optional rule.
-    const titleMm = (p.titleSize / 100) * canvas.hMm;
-    const specMm = (p.specSize / 100) * canvas.hMm;
-    let y = iy0 + slotH + titleMm * 0.4;
-    const titleB = textBlock(p.title.toUpperCase(), p.titleFont, titleMm, maxW);
-    if (titleB) {
-      out.push(...translateLines(titleB.lines, cx, y));
-      y += titleB.hMm;
-      if (p.titleRule) {
-        y += specMm * 0.5;
-        out.push({ closed: false, points: [[ix0, y], [ix1, y]] });
-        y += specMm * 0.5;
-      }
-    }
+    const valueStroke = p.accentTarget === "value" ? p.accentColor : undefined;
+    const specLines = p.specs.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
 
-    // Spec rows.
-    const lines = p.specs.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-    const leaderPad = specMm * 0.6;
-    y += specMm * (p.rowSpacing - 1) * 0.5; // breath after the title rule
-    for (const line of lines) {
-      const ci = line.indexOf(":");
-      const label = (ci >= 0 ? line.slice(0, ci) : line).trim();
-      const value = ci >= 0 ? line.slice(ci + 1).trim() : "";
-      const labelB = textBlock(label, p.bodyFont, specMm, maxW);
-      if (labelB) {
-        out.push(...translateLines(labelB.lines, ix0 + labelB.wMm / 2, y));
-        const labelEnd = ix0 + labelB.wMm;
-        if (value) {
-          const valueB = textBlock(value, p.bodyFont, specMm, maxW, valueStroke);
-          if (valueB) {
-            out.push(...translateLines(valueB.lines, ix1 - valueB.wMm / 2, y));
-            const valueStart = ix1 - valueB.wMm;
-            const gap = valueStart - labelEnd - 2 * leaderPad;
-            const dots = leaderDots(gap, specMm, p.bodyFont);
-            if (dots) out.push(...translateLines(dots.lines, labelEnd + leaderPad + dots.wMm / 2, y));
+    // Bottom-anchored footer is measured first so the row budget can reserve its space.
+    const footerB = p.footer.trim()
+      ? textBlock(p.footer, p.bodyFont, (p.specSize / 100) * canvas.hMm * 0.8, maxW)
+      : null;
+    const footerReserve = footerB ? footerB.hMm + (p.specSize / 100) * canvas.hMm : 0;
+
+    // Build title + rows at text-scale s; returns the polylines and consumed height
+    // (top of title-area to baseline after the last row).
+    const buildText = (s: number): { lines: Polyline[]; height: number } => {
+      const titleMm = (p.titleSize / 100) * canvas.hMm * s;
+      const specMm = (p.specSize / 100) * canvas.hMm * s;
+      const leaderPad = specMm * 0.6;
+      const acc: Polyline[] = [];
+      const top = iy0 + slotH + titleMm * 0.4;
+      let y = top;
+      const titleB = textBlock(p.title.toUpperCase(), p.titleFont, titleMm, maxW);
+      if (titleB) {
+        acc.push(...translateLines(titleB.lines, cx, y));
+        y += titleB.hMm;
+        if (p.titleRule) {
+          y += specMm * 0.5;
+          acc.push({ closed: false, points: [[ix0, y], [ix1, y]] });
+          y += specMm * 0.5;
+        }
+        y += specMm * (p.rowSpacing - 1) * 0.5;
+      }
+      for (const line of specLines) {
+        const ci = line.indexOf(":");
+        const label = (ci >= 0 ? line.slice(0, ci) : line).trim();
+        const value = ci >= 0 ? line.slice(ci + 1).trim() : "";
+        const labelB = textBlock(label, p.bodyFont, specMm, maxW);
+        if (labelB) {
+          acc.push(...translateLines(labelB.lines, ix0 + labelB.wMm / 2, y));
+          const labelEnd = ix0 + labelB.wMm;
+          if (value) {
+            const valueB = textBlock(value, p.bodyFont, specMm, maxW, valueStroke);
+            if (valueB) {
+              acc.push(...translateLines(valueB.lines, ix1 - valueB.wMm / 2, y));
+              const gap = ix1 - valueB.wMm - labelEnd - 2 * leaderPad;
+              const dots = leaderDots(gap, specMm, p.bodyFont);
+              if (dots) acc.push(...translateLines(dots.lines, labelEnd + leaderPad + dots.wMm / 2, y));
+            }
           }
         }
+        y += specMm * p.rowSpacing;
       }
-      y += specMm * p.rowSpacing;
-    }
+      return { lines: acc, height: y - top };
+    };
+
+    // Fit pass: scale text so title+rows fit the area below the motif slot, minus
+    // the footer reserve. One corrective pass suffices (width-clamping only shortens).
+    const budget = innerH - slotH - footerReserve;
+    const probe = buildText(1);
+    const s = probe.height > budget && probe.height > 0 ? budget / probe.height : 1;
+    out.push(...(s === 1 ? probe.lines : buildText(s).lines));
+
+    // Footer, bottom-anchored.
+    if (footerB) out.push(...translateLines(footerB.lines, cx, iy1 - footerB.hMm));
 
     return { polylines: out, widthMm: canvas.wMm, heightMm: canvas.hMm };
   },
