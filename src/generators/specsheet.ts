@@ -4,7 +4,7 @@
 // seed unused). Spec: docs/superpowers/specs/2026-06-28-spec-sheet-layout-design.md
 import type { GeneratorDef, Polyline } from "./types";
 import { FONT_IDS, type HersheyFontId } from "./text";
-import { textBlock, translateLines, placeMotif, drawFrame } from "./layout/kit";
+import { textBlock, translateLines, placeMotif, drawFrame, type Block } from "./layout/kit";
 
 type Params = {
   title: string;
@@ -46,6 +46,20 @@ const DEFAULTS: Params = {
   accentColor: "#1a3a52",
 };
 
+/**
+ * A run of '.' glyphs (bodyFont) whose laid-out width fits within gapMm, centered
+ * on x=0 like any textBlock. Returns null when even one dot would overflow.
+ */
+function leaderDots(gapMm: number, capMm: number, font: HersheyFontId): Block | null {
+  if (gapMm <= 0) return null;
+  const one = textBlock(".", font, capMm, Infinity);
+  if (!one || one.wMm > gapMm) return null;
+  const two = textBlock("..", font, capMm, Infinity);
+  const pitch = two ? Math.max(0.1, two.wMm - one.wMm) : one.wMm;
+  const n = Math.max(1, Math.floor((gapMm - one.wMm) / pitch) + 1);
+  return textBlock(".".repeat(n), font, capMm, Infinity);
+}
+
 export const specsheet: GeneratorDef<Params> = {
   id: "specsheet",
   name: "Spec Sheet",
@@ -80,6 +94,7 @@ export const specsheet: GeneratorDef<Params> = {
   generate: (p, _seed, canvas) => {
     const out: Polyline[] = [];
     const frameStroke = p.accentTarget === "frame" ? p.accentColor : undefined;
+    const valueStroke = p.accentTarget === "value" ? p.accentColor : undefined;
     out.push(...drawFrame(canvas, p.frameInsetMm, p.cornerMarks, frameStroke));
 
     const pad = Math.max(3, Math.min(canvas.wMm, canvas.hMm) * 0.03);
@@ -108,6 +123,32 @@ export const specsheet: GeneratorDef<Params> = {
         out.push({ closed: false, points: [[ix0, y], [ix1, y]] });
         y += specMm * 0.5;
       }
+    }
+
+    // Spec rows.
+    const lines = p.specs.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+    const leaderPad = specMm * 0.6;
+    y += specMm * (p.rowSpacing - 1) * 0.5; // breath after the title rule
+    for (const line of lines) {
+      const ci = line.indexOf(":");
+      const label = (ci >= 0 ? line.slice(0, ci) : line).trim();
+      const value = ci >= 0 ? line.slice(ci + 1).trim() : "";
+      const labelB = textBlock(label, p.bodyFont, specMm, maxW);
+      if (labelB) {
+        out.push(...translateLines(labelB.lines, ix0 + labelB.wMm / 2, y));
+        const labelEnd = ix0 + labelB.wMm;
+        if (value) {
+          const valueB = textBlock(value, p.bodyFont, specMm, maxW, valueStroke);
+          if (valueB) {
+            out.push(...translateLines(valueB.lines, ix1 - valueB.wMm / 2, y));
+            const valueStart = ix1 - valueB.wMm;
+            const gap = valueStart - labelEnd - 2 * leaderPad;
+            const dots = leaderDots(gap, specMm, p.bodyFont);
+            if (dots) out.push(...translateLines(dots.lines, labelEnd + leaderPad + dots.wMm / 2, y));
+          }
+        }
+      }
+      y += specMm * p.rowSpacing;
     }
 
     return { polylines: out, widthMm: canvas.wMm, heightMm: canvas.hMm };
