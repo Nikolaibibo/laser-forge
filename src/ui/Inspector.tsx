@@ -7,9 +7,12 @@ import { distortionById } from "../distortions/registry";
 import { schemaDefaults } from "./controls/schema";
 import { SchemaControls } from "./controls/SchemaControls";
 import { parseSvgMotif } from "../util/svgImport";
+import { fileToLuminance } from "../util/imageLoad";
 
 /** Generators that read the imported motif from the store. */
 const MOTIF_CONSUMERS = new Set(["blueprint", "pattern-maker", "svg", "specsheet"]);
+/** Generators that read the imported raster image from the store. */
+const IMAGE_CONSUMERS = new Set(["tspArt"]);
 
 export function Inspector() {
   const selectedNodeId = useApp((s) => s.selectedNodeId);
@@ -21,9 +24,12 @@ export function Inspector() {
   const setLayerParams = useApp((s) => s.setLayerParams);
   const motif = useApp((s) => s.motif);
   const setMotif = useApp((s) => s.setMotif);
+  const sourceImage = useApp((s) => s.sourceImage);
+  const setSourceImage = useApp((s) => s.setSourceImage);
 
   const [motifError, setMotifError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLInputElement>(null);
 
   // Clear stale parse-error when the user switches to a different generator.
   useEffect(() => { setMotifError(null); }, [generatorId]);
@@ -47,6 +53,7 @@ export function Inspector() {
       setGenParams(generatorId, { ...values, [field]: value });
 
     const showMotif = MOTIF_CONSUMERS.has(generatorId);
+    const showImage = IMAGE_CONSUMERS.has(generatorId);
 
     const onFile = (f: File | undefined) => {
       if (!f) return;
@@ -59,6 +66,13 @@ export function Inspector() {
             setMotifError(e instanceof Error ? e.message : String(e));
           }
         })
+        .catch((e) => setMotifError(e instanceof Error ? e.message : String(e)));
+    };
+
+    const onImageFile = (f: File | undefined) => {
+      if (!f) return;
+      fileToLuminance(f)
+        .then((img) => { setSourceImage(img); setMotifError(null); })
         .catch((e) => setMotifError(e instanceof Error ? e.message : String(e)));
     };
 
@@ -111,6 +125,47 @@ export function Inspector() {
             )}
             {motifError && (
               <div className="lf-motif__error">{motifError}</div>
+            )}
+          </div>
+        )}
+
+        {showImage && (
+          <div className="lf-motif">
+            <div className="lf-motif__label">IMAGE</div>
+            <input
+              ref={imgRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                onImageFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <div className="lf-motif__row">
+              <button
+                className="lf-motif__btn transition-all-fast"
+                onClick={() => imgRef.current?.click()}
+              >
+                Load image…
+              </button>
+              {sourceImage && (
+                <button
+                  className="lf-motif__btn lf-motif__btn--clear transition-all-fast"
+                  onClick={() => setSourceImage(null)}
+                  title="Clear image"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {sourceImage && (
+              <div className="lf-motif__chip">
+                <span className="lf-motif__filename">{sourceImage.name}</span>
+                <span className="lf-motif__meta">
+                  {sourceImage.w}×{sourceImage.h}
+                </span>
+              </div>
             )}
           </div>
         )}

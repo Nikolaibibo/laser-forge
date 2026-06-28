@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Artwork, Polyline } from "../generators/types";
+import type { SourceImage } from "../util/imageLoad";
 import { reorder } from "../lib/reorder";
 
 export type Layer = {
@@ -46,6 +47,10 @@ export type AppState = {
   clearLayers: () => void;
   motif: Motif | null;
   setMotif: (m: Motif | null) => void;
+
+  /** Imported raster image (luminance) for image-driven generators (TSP art). */
+  sourceImage: SourceImage | null;
+  setSourceImage: (img: SourceImage | null) => void;
   hydrate: (state: Partial<AppState>) => void;
   // Plotter state (PlotterPort instance lives in a useRef in PlotterPanel — not stored here)
   plotterConnected: boolean;
@@ -131,6 +136,9 @@ export const useApp = create<AppState>((set) => ({
   clearLayers: () => set({ layers: [], layerParams: {}, selectedNodeId: "source" }),
   motif: null,
   setMotif: (m) => set({ motif: m }),
+
+  sourceImage: null,
+  setSourceImage: (img) => set({ sourceImage: img }),
   hydrate: (s) => set(s),
   plotterConnected: false,
   plotterState: "Disconnected",

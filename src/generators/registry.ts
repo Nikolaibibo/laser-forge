@@ -6,6 +6,8 @@ import { voronoiMoire } from "./voronoiMoire";
 import { contours } from "./contours";
 import { spaceFilling } from "./spaceFilling";
 import { stringArt } from "./stringArt";
+import { tspArt } from "./tspArt";
+import { ridgeline } from "./ridgeline";
 import { lSystem } from "./lSystem";
 import { differentialGrowth } from "./differentialGrowth";
 import { superformula } from "./superformula";
@@ -44,6 +46,8 @@ export const GENERATOR_GROUPS: { title: string; items: GeneratorDef<any>[] }[] =
       voronoiMoire,
       contours,
       stringArt,
+      tspArt,
+      ridgeline,
       lSystem,
       differentialGrowth,
     ],

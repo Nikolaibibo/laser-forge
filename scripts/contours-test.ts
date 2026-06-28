@@ -13,8 +13,8 @@ const P = { ...contours.defaults };
   for (const l of art.polylines) assert(l.points.length >= 2, "no degenerate lines");
 }
 
-// 2. All three field types produce output without throwing.
-for (const fieldType of ["noise", "ripple", "waves"] as const) {
+// 2. All field types produce output without throwing.
+for (const fieldType of ["noise", "ripple", "waves", "quasicrystal"] as const) {
   const art = contours.generate({ ...P, fieldType }, 3, canvas);
   assert(art.polylines.length > 0, `${fieldType} yields contours`);
 }

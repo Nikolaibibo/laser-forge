@@ -13,7 +13,7 @@ import type { GeneratorDef, Point, Polyline } from "./types";
 import { makeNoise2D } from "../util/noise";
 import { fitToCanvas } from "../util/path";
 
-type FieldType = "noise" | "ripple" | "waves";
+type FieldType = "noise" | "ripple" | "waves" | "quasicrystal";
 
 type Params = {
   fieldType: FieldType;
@@ -22,6 +22,7 @@ type Params = {
   scale: number; // feature frequency (higher = smaller features)
   octaves: number; // fractal detail (noise only)
   warp: number; // domain-warp amount (noise only)
+  symmetry: number; // plane-wave count (quasicrystal only)
   marginMm: number;
 };
 
@@ -32,6 +33,7 @@ const DEFAULTS: Params = {
   scale: 2.4,
   octaves: 4,
   warp: 0.35,
+  symmetry: 5,
   marginMm: 12,
 };
 
@@ -52,6 +54,20 @@ const buildField = (p: Params, seed: number): Field => {
       const b = Math.sin((y - 0.15 * n(y, x)) * p.scale * 7 + 1.3);
       const c = Math.sin((x + y) * p.scale * 5 + 2.1);
       return 0.5 + (a + b + c) / 6;
+    };
+  }
+  if (p.fieldType === "quasicrystal") {
+    // Sum of N plane waves at evenly spaced angles → N-fold symmetric
+    // interference (de Bruijn). Odd N (5,7) gives the classic quasicrystal.
+    const waves = Math.max(2, Math.round(p.symmetry));
+    const freq = p.scale * 9;
+    return (x, y) => {
+      let sum = 0;
+      for (let k = 0; k < waves; k++) {
+        const a = (Math.PI * k) / waves;
+        sum += Math.cos(freq * ((x - 0.5) * Math.cos(a) + (y - 0.5) * Math.sin(a)));
+      }
+      return 0.5 + sum / (2 * waves);
     };
   }
   // fractal simplex noise with optional domain warp
@@ -199,12 +215,13 @@ export const contours: GeneratorDef<Params> = {
     "Field is noise (fractal terrain), ripple (concentric), or waves (interference).",
   defaults: DEFAULTS,
   schema: {
-    fieldType: { value: DEFAULTS.fieldType, options: ["noise", "ripple", "waves"], label: "Feld" },
+    fieldType: { value: DEFAULTS.fieldType, options: ["noise", "ripple", "waves", "quasicrystal"], label: "Feld" },
     gridRes: { value: DEFAULTS.gridRes, min: 20, max: 250, step: 5, label: "Auflösung", hint: "höher = glattere Linien, langsamer" },
     levels: { value: DEFAULTS.levels, min: 2, max: 40, step: 1, label: "Höhenlinien" },
     scale: { value: DEFAULTS.scale, min: 0.5, max: 8, step: 0.1, label: "Feldgröße", hint: "höher = kleinere Features" },
     octaves: { value: DEFAULTS.octaves, min: 1, max: 7, step: 1, label: "Oktaven (Noise)", render: (g) => g("Contours / Topographic.fieldType") === "noise" },
     warp: { value: DEFAULTS.warp, min: 0, max: 1, step: 0.05, label: "Domain Warp (Noise)", render: (g) => g("Contours / Topographic.fieldType") === "noise" },
+    symmetry: { value: DEFAULTS.symmetry, min: 2, max: 12, step: 1, label: "Symmetrie (Quasikristall)", hint: "Wellen-Anzahl: 5/7 = klassisch", render: (g) => g("Contours / Topographic.fieldType") === "quasicrystal" },
     marginMm: { value: DEFAULTS.marginMm, min: 0, max: 40, step: 1, label: "Rand (mm)" },
   },
   generate: (p, seed, canvas) => ({
