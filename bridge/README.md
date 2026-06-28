@@ -33,7 +33,9 @@ In the app, pick the **AxiDraw** tab in the machine dock (bottom of the canvas).
 `GET /status` · `POST /pen-up` `/pen-down` `/set-zero` `/align` `/home`
 `/outline` (SVG body) `/plot` (SVG body) `/stop`. Query params:
 `?profile=pencil|felt` · `?speed=<1-100>` `?accel=<1-100>` (override profile;
-lower = cleaner fine detail) · `/outline?dry=1` (default, pen-up trace) or `?dry=0` (draws the frame).
+lower = cleaner fine detail) · `?delay_down=<0-1000>` `?delay_up=<0-1000>` (pen
+settle, ms: dwell after lowering before drawing / after raising before moving;
+override profile) · `/outline?dry=1` (default, pen-up trace) or `?dry=0` (draws the frame).
 
 ## Tests
 

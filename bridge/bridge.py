@@ -122,18 +122,27 @@ def _set_flag(flags: list[str], name: str, value) -> list[str]:
 
 
 def pen_flags(
-    profile: str, dry: bool = False, speed: int | None = None, accel: int | None = None
+    profile: str, dry: bool = False, speed: int | None = None, accel: int | None = None,
+    delay_down: int | None = None, delay_up: int | None = None,
 ) -> list[str]:
     """Pen CLI flags for a profile.
     - dry=True forces pen_pos_down == up (0) so the servo never lowers (dry trace).
     - speed overrides --speed_pendown (% of max); accel overrides --accel.
-      Lower both for cleaner fine detail (small text, tight curves)."""
+      Lower both for cleaner fine detail (small text, tight curves).
+    - delay_down/delay_up override --pen_delay_down/--pen_delay_up (ms): how long
+      the tip settles after lowering (before drawing) / after raising (before the
+      next move). Longer down-delay = ink starts before motion (no missing line
+      starts); longer up-delay = tip fully clears before travel (no smearing)."""
     flags = PEN_BASE + PROFILES.get(profile, PROFILES["pencil"])
     flags = _set_flag(flags, "--pen_pos_down", "0" if dry else "100")
     if speed is not None:
         flags = _set_flag(flags, "--speed_pendown", max(1, min(100, int(speed))))
     if accel is not None:
         flags = _set_flag(flags, "--accel", max(1, min(100, int(accel))))
+    if delay_down is not None:
+        flags = _set_flag(flags, "--pen_delay_down", max(0, min(1000, int(delay_down))))
+    if delay_up is not None:
+        flags = _set_flag(flags, "--pen_delay_up", max(0, min(1000, int(delay_up))))
     return flags
 
 ALLOWED_ORIGINS = {
@@ -273,11 +282,12 @@ def set_zero() -> tuple[bool, str]:
 def plot_svg(
     raw_svg: str, profile: str, dry: bool = False,
     speed: int | None = None, accel: int | None = None,
+    delay_down: int | None = None, delay_up: int | None = None,
 ) -> tuple[bool, str]:
     """Prep + plot an SVG via a killable axicli subprocess. dry=True traces with
-    the pen held up (dry outline). speed/accel override the profile defaults."""
+    the pen held up (dry outline). speed/accel/delay_* override profile defaults."""
     global PLOT_PROC
-    pen = pen_flags(profile, dry, speed, accel)
+    pen = pen_flags(profile, dry, speed, accel, delay_down, delay_up)
     prepped = prep_svg(raw_svg)
     tmp = tempfile.NamedTemporaryFile(
         mode="w", suffix=".svg", prefix="laserforge_", delete=False
@@ -451,7 +461,8 @@ class Handler(BaseHTTPRequestHandler):
             # /outline defaults to a dry (pen-up) trace; ?dry=0 draws the frame.
             dry = "/outline" in path and not re.search(r"[?&]dry=0\b", self.path)
             speed, accel = self._intparam("speed"), self._intparam("accel")
-            guarded(lambda: plot_svg(body, profile, dry, speed, accel))
+            delay_down, delay_up = self._intparam("delay_down"), self._intparam("delay_up")
+            guarded(lambda: plot_svg(body, profile, dry, speed, accel, delay_down, delay_up))
         else:
             self._json(404, {"ok": False, "error": "not found"})
 

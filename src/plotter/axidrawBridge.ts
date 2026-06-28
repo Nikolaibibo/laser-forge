@@ -53,6 +53,8 @@ export class AxiDrawBridge {
       dry?: boolean;
       speed?: number;
       accel?: number;
+      delayDown?: number;
+      delayUp?: number;
     },
   ): Promise<T> {
     const q = new URLSearchParams();
@@ -60,6 +62,8 @@ export class AxiDrawBridge {
     if (init?.dry !== undefined) q.set("dry", init.dry ? "1" : "0");
     if (init?.speed !== undefined) q.set("speed", String(init.speed));
     if (init?.accel !== undefined) q.set("accel", String(init.accel));
+    if (init?.delayDown !== undefined) q.set("delay_down", String(init.delayDown));
+    if (init?.delayUp !== undefined) q.set("delay_up", String(init.delayUp));
     const qs = q.toString();
     const url = this.base + path + (qs ? `?${qs}` : "");
     let res: Response;
@@ -118,8 +122,10 @@ export class AxiDrawBridge {
     dry = true,
     speed?: number,
     accel?: number,
+    delayDown?: number,
+    delayUp?: number,
   ): Promise<BridgeResult> {
-    return this.req("/outline", { svg, profile, dry, speed, accel });
+    return this.req("/outline", { svg, profile, dry, speed, accel, delayDown, delayUp });
   }
   /** Full plot. Resolves when the plot finishes (or rejects if stopped). */
   plot(
@@ -127,8 +133,10 @@ export class AxiDrawBridge {
     profile?: PenProfile,
     speed?: number,
     accel?: number,
+    delayDown?: number,
+    delayUp?: number,
   ): Promise<BridgeResult> {
-    return this.req("/plot", { svg, profile, speed, accel });
+    return this.req("/plot", { svg, profile, speed, accel, delayDown, delayUp });
   }
   /** Abort a running plot; bridge raises the pen and de-energises motors. */
   stop(): Promise<BridgeResult> {

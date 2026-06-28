@@ -17,6 +17,15 @@ import {
 const MACHINE_MAX_LONG = 340; // mm — the frame is the limit (~A4 landscape long edge)
 const MACHINE_MAX_SHORT = 270; // mm — short axis
 
+// Per-profile pen settle defaults (ms): [delayDown, delayUp]. Mirrors the
+// PROFILES table in bridge/bridge.py. The delay sliders seed from these on
+// profile change so we don't clobber e.g. gel's long down-settle by accident.
+const PROFILE_DELAYS: Record<PenProfile, [number, number]> = {
+  pencil: [60, 100],
+  felt: [120, 120],
+  gel: [200, 150],
+};
+
 type Conn = "checking" | "online" | "offline";
 
 export function AxiDrawPanel() {
@@ -31,8 +40,20 @@ export function AxiDrawPanel() {
   const [profile, setProfile] = useState<PenProfile>("pencil");
   const [speed, setSpeed] = useState(35); // % of max pen-down speed — lower = cleaner fine detail
   const [accel, setAccel] = useState(30); // % — lower = less overshoot on small/tight features
+  // Pen settle delays (ms), seeded from the active profile. delayDown = dwell
+  // after lowering before drawing; delayUp = dwell after raising before moving.
+  const [delayDown, setDelayDown] = useState(PROFILE_DELAYS.pencil[0]);
+  const [delayUp, setDelayUp] = useState(PROFILE_DELAYS.pencil[1]);
   const [join, setJoin] = useState(true);
   const [dedupe, setDedupe] = useState(false);
+
+  // Reseed the delay sliders to the chosen profile's tuned defaults whenever the
+  // profile changes — keeps each pen's sane baseline, still tweakable from there.
+  const pickProfile = (p: PenProfile) => {
+    setProfile(p);
+    setDelayDown(PROFILE_DELAYS[p][0]);
+    setDelayUp(PROFILE_DELAYS[p][1]);
+  };
 
   const ping = useCallback(async () => {
     try {
@@ -76,7 +97,7 @@ export function AxiDrawPanel() {
     setBusy(true);
     setMsg("Plotting… (press Stop to abort)");
     try {
-      const r = await b.plot(svg, profile, speed, accel);
+      const r = await b.plot(svg, profile, speed, accel, delayDown, delayUp);
       setMsg(r.ok ? "Plot ✓ done" : `Plot stopped: ${r.message ?? ""}`);
     } catch (e) {
       if (e instanceof BridgeUnreachable) setConn("offline");
@@ -91,7 +112,7 @@ export function AxiDrawPanel() {
     if (!artwork) return;
     const [minX, minY, maxX, maxY] = bbox(artwork);
     const svg = bboxFrameSvg(minX, minY, maxX - minX, maxY - minY, artwork.widthMm, artwork.heightMm);
-    run(dry ? "Dry outline" : "Draw frame", () => b.outline(svg, profile, dry, speed, accel));
+    run(dry ? "Dry outline" : "Draw frame", () => b.outline(svg, profile, dry, speed, accel, delayDown, delayUp));
   };
 
   const doStop = async () => {
@@ -137,7 +158,7 @@ export function AxiDrawPanel() {
         </button>
         <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
           Pen
-          <select value={profile} onChange={(e) => setProfile(e.target.value as PenProfile)}>
+          <select value={profile} onChange={(e) => pickProfile(e.target.value as PenProfile)}>
             <option value="pencil">Bleistift</option>
             <option value="felt">Filzstift</option>
             <option value="gel">Gel (weiß/schwarz)</option>
@@ -155,6 +176,18 @@ export function AxiDrawPanel() {
           <input type="range" min={5} max={80} value={accel} onChange={(e) => setAccel(Number(e.target.value))} />
         </label>
         <span style={{ color: "var(--text-muted)", fontSize: 11 }}>niedriger = sauberere Feindetails</span>
+      </div>
+
+      <div style={{ ...row, gap: 14 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6 }} title="Verweildauer (ms) nachdem die Spitze abgesenkt wurde, bevor gezeichnet wird. Höher = Tinte/Strich startet sicher vor der Bewegung (keine fehlenden Linienanfänge).">
+          Delay ab <strong style={{ width: 32, textAlign: "right" }}>{delayDown}</strong>
+          <input type="range" min={0} max={500} step={10} value={delayDown} onChange={(e) => setDelayDown(Number(e.target.value))} />
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 6 }} title="Verweildauer (ms) nachdem die Spitze angehoben wurde, bevor weitergefahren wird. Höher = Spitze ist sicher frei (kein Verwischen).">
+          Delay auf <strong style={{ width: 32, textAlign: "right" }}>{delayUp}</strong>
+          <input type="range" min={0} max={500} step={10} value={delayUp} onChange={(e) => setDelayUp(Number(e.target.value))} />
+        </label>
+        <span style={{ color: "var(--text-muted)", fontSize: 11 }}>ms · Reset bei Stift-Wechsel</span>
       </div>
 
       {offline && (
