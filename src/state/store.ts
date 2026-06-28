@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Artwork, Polyline } from "../generators/types";
+import { reorder } from "../ui/hooks/useDragReorder";
 
 export type Layer = {
   uid: string;
@@ -40,6 +41,7 @@ export type AppState = {
   removeLayer: (uid: string) => void;
   toggleLayer: (uid: string) => void;
   moveLayer: (uid: string, dir: -1 | 1) => void;
+  reorderLayers: (from: number, to: number) => void;
   setLayerParams: (uid: string, params: Record<string, unknown>) => void;
   clearLayers: () => void;
   motif: Motif | null;
@@ -112,6 +114,9 @@ export const useApp = create<AppState>((set) => ({
       [next[i], next[j]] = [next[j], next[i]];
       return { layers: next };
     }),
+  reorderLayers: (from, to) =>
+    set((s) => ({ layers: reorder(s.layers, from, to) })),
+
   setLayerParams: (uid, params) =>
     set((s) => ({ layerParams: { ...s.layerParams, [uid]: params } })),
   clearLayers: () => set({ layers: [], layerParams: {}, selectedNodeId: "source" }),

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useApp } from "../state/store";
 import { byId, GENERATOR_GROUPS } from "../generators/registry";
 import { DISTORTIONS } from "../distortions/registry";
+import { useDragReorder } from "./hooks/useDragReorder";
 
 /** Look up which group a generator belongs to (for the tag label). */
 function generatorGroup(id: string): string | undefined {
@@ -20,9 +21,15 @@ export function PipelineRail() {
   const removeLayer = useApp((s) => s.removeLayer);
   const addLayer = useApp((s) => s.addLayer);
   const setGalleryOpen = useApp((s) => s.setGalleryOpen);
+  const reorderLayers = useApp((s) => s.reorderLayers);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const addBtnRef = useRef<HTMLButtonElement>(null);
+
+  const { getItemProps, dragOverIndex } = useDragReorder({
+    count: layers.length,
+    onReorder: reorderLayers,
+  });
 
   const gen = byId(generatorId);
   const group = generatorGroup(generatorId);
@@ -64,18 +71,29 @@ export function PipelineRail() {
       {layers.map((layer, i) => {
         const def = DISTORTIONS.find((d) => d.id === layer.distortionId);
         const isSelected = selectedNodeId === layer.uid;
+        const isDragOver = dragOverIndex === i;
+        const dragProps = getItemProps(i);
         return (
           <div key={layer.uid}>
             {/* Connector line */}
             <div className="lf-node__flow" aria-hidden="true" />
 
             <div
-              className={`lf-node${isSelected ? " lf-node--selected" : ""}${!layer.enabled ? " lf-node--disabled" : ""}`}
+              className={`lf-node${isSelected ? " lf-node--selected" : ""}${!layer.enabled ? " lf-node--disabled" : ""}${isDragOver ? " lf-node--drag-over" : ""}`}
               role="button"
               tabIndex={0}
               onClick={() => setSelectedNode(layer.uid)}
               onKeyDown={(e) => e.key === "Enter" && setSelectedNode(layer.uid)}
             >
+              {/* Drag grip — draggable, does not trigger node-select */}
+              <span
+                className="lf-node__grip"
+                title="Drag to reorder"
+                {...dragProps}
+                onClick={(e) => e.stopPropagation()}
+              >
+                ⠿
+              </span>
               <span className="lf-node__badge">{i + 1}</span>
               <span className="lf-node__name">{def?.name ?? layer.distortionId}</span>
               <div className="lf-node__actions">
