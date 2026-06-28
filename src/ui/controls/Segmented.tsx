@@ -2,9 +2,9 @@ type V = string | number;
 type Props = { label: string; value: V; options: ReadonlyArray<V>; onChange: (v: V) => void };
 export function Segmented({ label, value, options, onChange }: Props) {
   return (
-    <label className="lf-control lf-control--col">
+    <div className="lf-control lf-control--col">
       <span className="lf-control__label">{label}</span>
-      <div className="lf-segmented" role="radiogroup">
+      <div className="lf-segmented" role="radiogroup" aria-label={label}>
         {options.map((o) => (
           <button
             key={String(o)}
@@ -18,6 +18,6 @@ export function Segmented({ label, value, options, onChange }: Props) {
           </button>
         ))}
       </div>
-    </label>
+    </div>
   );
 }

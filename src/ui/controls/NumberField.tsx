@@ -52,7 +52,7 @@ export function NumberField({ label, value, min, max, step, unit, onChange }: Pr
   const onPointerUp = () => (drag.current = null);
 
   return (
-    <label className="lf-control">
+    <div className="lf-control">
       <span className="lf-control__label">{label}</span>
       <div className="lf-numfield">
         {hasRange && (
@@ -86,6 +86,6 @@ export function NumberField({ label, value, min, max, step, unit, onChange }: Pr
           {unit && <span className="lf-unit">{unit}</span>}
         </span>
       </div>
-    </label>
+    </div>
   );
 }
