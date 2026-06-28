@@ -9,6 +9,7 @@ import { PipelineRail } from "./ui/PipelineRail";
 import { Inspector } from "./ui/Inspector";
 import { Console } from "./ui/Console";
 import { MachineDrawer } from "./ui/MachineDrawer";
+import { GeneratorGallery } from "./ui/GeneratorGallery";
 import { readHash } from "./state/urlSync";
 import type { Artwork } from "./generators/types";
 
@@ -92,6 +93,7 @@ export default function App() {
       <Inspector />
       <Console />
       <MachineDrawer />
+      <GeneratorGallery />
     </div>
   );
 }
