@@ -1197,6 +1197,137 @@ input, select, textarea, button {
   pointer-events: none;
 }
 
+/* === MachineDrawer (Task 12) === */
+
+/* Slide-up panel anchored to bottom of viewport, above the console */
+.lf-drawer {
+  position: fixed;
+  bottom: 44px; /* sit above the 44px console bar */
+  left: 0;
+  right: 0;
+  z-index: var(--z-drawer);
+  max-height: 45vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--line-strong);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45);
+
+  /* Slide-up entry */
+  animation: drawerSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes drawerSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* No animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .lf-drawer {
+    animation: none;
+  }
+}
+
+/* Header row */
+.lf-drawer__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+}
+
+/* Tab strip */
+.lf-drawer__tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.lf-drawer__tab {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.12s ease, border-color 0.12s ease;
+  line-height: 1;
+}
+
+.lf-drawer__tab:hover {
+  color: var(--text-secondary);
+}
+
+.lf-drawer__tab--active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+/* Connection status cluster */
+.lf-drawer__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* LED dot */
+.lf-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.lf-drawer__state-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Close button */
+.lf-drawer__close {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.lf-drawer__close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* Scrollable panel body */
+.lf-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 /* === GeneratorGallery === */
 
 /* Full-screen dimmed backdrop */
