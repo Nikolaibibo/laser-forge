@@ -59,6 +59,7 @@ export function NumberField({ label, value, min, max, step, unit, onChange }: Pr
           <input
             type="range"
             className="lf-slider"
+            aria-label={label}
             min={min}
             max={max}
             step={step ?? 1}
@@ -75,6 +76,7 @@ export function NumberField({ label, value, min, max, step, unit, onChange }: Pr
         >
           <input
             className="lf-numinput"
+            aria-label={label}
             value={text}
             inputMode="decimal"
             onChange={(e) => setText(e.target.value)}

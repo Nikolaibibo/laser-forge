@@ -6,7 +6,7 @@ export function TextField({ label, value, rows, onChange }: Props) {
       {rows ? (
         <textarea className="lf-textarea" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
       ) : (
-        <input className="lf-textinput" value={value} onChange={(e) => onChange(e.target.value)} />
+        <input type="text" className="lf-textinput" value={value} onChange={(e) => onChange(e.target.value)} />
       )}
     </label>
   );
