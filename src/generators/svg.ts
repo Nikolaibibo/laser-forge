@@ -28,6 +28,16 @@ const ROT: Record<number, (p: Point) => Point> = {
   270: ([x, y]) => [y, -x],
 };
 
+/** Procedural fallback used when no motif is loaded (headless tests / render-demo). */
+function fallbackGeometry(wMm: number, hMm: number): Polyline[] {
+  const cx = wMm / 2;
+  const cy = hMm / 2;
+  const r = Math.min(wMm, hMm) * 0.3;
+  return [
+    { points: [[cx, cy - r], [cx + r, cy], [cx, cy + r], [cx - r, cy], [cx, cy - r]], closed: false },
+  ];
+}
+
 /** Center polylines (around their bounds midpoint) on the canvas at original scale. */
 function centerOnCanvas(lines: Polyline[], wMm: number, hMm: number): Polyline[] {
   const b = polylineBounds(lines);
@@ -54,11 +64,9 @@ export const svg: GeneratorDef<Params> = {
     const W = canvas.wMm;
     const H = canvas.hMm;
     const motif = useApp.getState().motif;
-    if (!motif || motif.polylines.length === 0) {
-      return { polylines: [], widthMm: W, heightMm: H };
-    }
+    const lines = motif && motif.polylines.length > 0 ? motif.polylines : fallbackGeometry(W, H);
     const rot = ROT[p.rotation] ?? ROT[0];
-    const rotated = motif.polylines.map((l) => ({ ...l, points: l.points.map(rot) }));
+    const rotated = lines.map((l) => ({ ...l, points: l.points.map(rot) }));
     const placed = p.fitToPage
       ? fitToCanvas(rotated, W, H, p.marginMm)
       : centerOnCanvas(rotated, W, H);
