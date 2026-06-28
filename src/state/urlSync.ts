@@ -5,7 +5,7 @@ export type SharePayload = {
   s: number;
   w: number;
   h: number;
-  p: Record<string, unknown>;
+  p: Record<string, Record<string, unknown>>;
   l?: Layer[];
   lp?: Record<string, Record<string, unknown>>;
   /** Pen width in mm (optional — older links default to 0.3). */

@@ -78,7 +78,7 @@ export default function App() {
         layers: h.l ?? [],
         layerParams: h.lp ?? {},
         penWidthMm: h.pw ?? 0.3,
-        genParams: {}, // TODO(Task 14): restore genParams from hash once SharePayload.p is nested
+        genParams: h.p ?? {},
       });
     }
   }, [hydrate]);

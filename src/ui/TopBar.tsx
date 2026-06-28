@@ -27,7 +27,7 @@ export function TopBar() {
       s: seed,
       w,
       h,
-      p: genParams[generatorId] ?? {},
+      p: genParams,
       l: layers,
       lp: layerParams,
       pw: penWidthMm,
