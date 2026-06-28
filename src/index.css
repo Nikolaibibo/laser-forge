@@ -781,6 +781,251 @@ input, select, textarea, button {
   line-height: 1.4;
 }
 
+/* === PipelineRail nodes === */
+
+/* Node card */
+.lf-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: 0 8px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  position: relative;
+}
+
+.lf-node:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-hover);
+}
+
+/* Selected state — accent ring */
+.lf-node--selected {
+  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--accent);
+}
+
+/* Source node accent */
+.lf-node--source {
+  margin-top: 12px;
+}
+
+/* Disabled (muted) layer */
+.lf-node--disabled {
+  opacity: 0.45;
+}
+
+/* Diamond icon for source */
+.lf-node__icon {
+  font-size: 14px;
+  color: var(--accent);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Node info: name + tag */
+.lf-node__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Node name text */
+.lf-node__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Group tag chip */
+.lf-node__tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Number badge for layers */
+.lf-node__badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-chrome);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Swap button (source) */
+.lf-node__swap {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.lf-node__swap:hover {
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* Action buttons cluster (layer nodes) */
+.lf-node__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Eye toggle button */
+.lf-node__eye {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  border-radius: var(--radius);
+  transition: color 0.12s ease;
+}
+
+.lf-node__eye--on {
+  color: var(--accent);
+}
+
+.lf-node__eye:hover {
+  color: var(--text-primary);
+}
+
+/* Remove button — visible on node hover */
+.lf-node__remove {
+  font-size: 14px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 3px;
+  line-height: 1;
+  border-radius: var(--radius);
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.lf-node:hover .lf-node__remove {
+  opacity: 1;
+}
+
+.lf-node__remove:hover {
+  color: var(--err);
+}
+
+/* Connector line between nodes */
+.lf-node__flow {
+  width: 1px;
+  height: 10px;
+  background: var(--line-strong);
+  margin: 0 auto;
+  position: relative;
+  left: 0;
+}
+
+/* Add Layer button row */
+.lf-rail__add {
+  position: relative;
+  padding: 10px 8px 12px;
+}
+
+.lf-rail__add-btn {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.lf-rail__add-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* Add menu popover */
+.lf-addmenu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-raised) - 1);
+}
+
+.lf-addmenu {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% - 2px);
+  z-index: var(--z-raised);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.12s ease;
+}
+
+.lf-addmenu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.lf-addmenu__item:last-child {
+  border-bottom: none;
+}
+
+.lf-addmenu__item:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
 /* MachineDrawer — overlay */
 .lf-machine-drawer {
   position: fixed;

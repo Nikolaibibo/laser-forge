@@ -56,6 +56,9 @@ export type AppState = {
    *  without living inside the key-remounted Stage subtree. */
   currentArtwork: Artwork | null;
   setCurrentArtwork: (a: Artwork | null) => void;
+  /** Controls the generator-gallery overlay (Task 10). */
+  galleryOpen: boolean;
+  setGalleryOpen: (v: boolean) => void;
 };
 
 let uidCounter = 0;
@@ -123,4 +126,6 @@ export const useApp = create<AppState>((set) => ({
   setPlotterProgress: (v) => set({ plotterProgress: v }),
   currentArtwork: null,
   setCurrentArtwork: (a) => set({ currentArtwork: a }),
+  galleryOpen: false,
+  setGalleryOpen: (v) => set({ galleryOpen: v }),
 }));

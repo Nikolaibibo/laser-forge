@@ -1,0 +1,14 @@
+import assert from "node:assert";
+import { useApp } from "../src/state/store.ts";
+const s = () => useApp.getState();
+s().clearLayers();
+s().setGenerator("flow-field");
+assert.strictEqual(s().selectedNodeId, "source");
+s().addLayer("noise-warp");
+const uid = s().layers[0].uid;
+assert.strictEqual(s().selectedNodeId, uid);
+s().setSelectedNode("source");
+assert.strictEqual(s().selectedNodeId, "source");
+s().setGalleryOpen(true);
+assert.strictEqual(s().galleryOpen, true);
+console.log("ok");
