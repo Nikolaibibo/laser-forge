@@ -121,3 +121,327 @@ input, select, textarea, button {
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
 }
+
+/* === Controls === */
+
+/* Base control wrapper — default is column (label above) */
+.lf-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  cursor: default;
+}
+
+/* Row variant: label on left, input on right */
+.lf-control--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Col variant: explicit stack (label then input below) */
+.lf-control--col {
+  flex-direction: column;
+}
+
+/* Control label */
+.lf-control__label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* NumberField — slider + box container */
+.lf-numfield {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Range slider */
+.lf-slider {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--line-strong);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.lf-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+
+.lf-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+
+.lf-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* Numeric display/input box */
+.lf-numbox {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 2px 5px;
+  min-width: 52px;
+}
+
+/* Scrub variant — horizontal drag cursor */
+.lf-numbox--scrub {
+  cursor: ew-resize;
+}
+
+.lf-numbox:focus-within {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Numeric input element inside the box */
+.lf-numinput {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+  text-align: right;
+  padding: 0;
+}
+
+/* Unit label */
+.lf-unit {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* Toggle switch */
+.lf-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--line-strong);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.lf-toggle--on {
+  background: var(--accent);
+}
+
+.lf-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Toggle knob */
+.lf-toggle__knob {
+  position: absolute;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  transition: transform 0.15s ease;
+  pointer-events: none;
+}
+
+.lf-toggle--on .lf-toggle__knob {
+  transform: translateX(12px);
+}
+
+/* Segmented control */
+.lf-segmented {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-raised);
+}
+
+.lf-seg {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  padding: 3px 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s ease, color 0.1s ease;
+  user-select: none;
+}
+
+.lf-seg:last-child {
+  border-right: none;
+}
+
+.lf-seg:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.lf-seg--on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.lf-seg--on:hover {
+  background: var(--accent-hover);
+}
+
+.lf-seg:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Select dropdown */
+.lf-select {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 3px 22px 3px 6px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b95a3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  outline: none;
+}
+
+.lf-select:focus-visible {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Text input (single line) */
+.lf-textinput {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  width: 100%;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.lf-textinput:focus-visible {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Textarea (multi-line) */
+.lf-textarea {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  width: 100%;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.lf-textarea:focus-visible {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Color swatch + hex display */
+.lf-color {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lf-color input[type="color"] {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1px;
+  background: var(--bg-raised);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lf-color input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.lf-color input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+/* Hex code display */
+.lf-color__hex {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  user-select: all;
+}
+
+/* Control group container */
+.lf-controls {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 1.25);
+  padding: var(--space);
+}
