@@ -2,6 +2,7 @@ import type { GeneratorDef } from "./types";
 import { harmonograph } from "./harmonograph";
 import { flowField } from "./flowField";
 import { voronoi } from "./voronoi";
+import { voronoiMoire } from "./voronoiMoire";
 import { lSystem } from "./lSystem";
 import { differentialGrowth } from "./differentialGrowth";
 import { superformula } from "./superformula";
@@ -37,6 +38,7 @@ export const GENERATOR_GROUPS: { title: string; items: GeneratorDef<any>[] }[] =
       truchet,
       attractor,
       voronoi,
+      voronoiMoire,
       lSystem,
       differentialGrowth,
     ],

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "../state/store";
 import { svgExport } from "../render/svgExport";
 import { bbox } from "../plotter/gcode";
+import { splitByStroke } from "../plotter/penSplit";
 import {
   AxiDrawBridge,
   bboxFrameSvg,
@@ -33,6 +34,7 @@ export function AxiDrawPanel() {
   const penWidthMm = useApp((s) => s.penWidthMm);
 
   const bridgeRef = useRef(new AxiDrawBridge());
+  const cancelRef = useRef(false); // set by Stop to break the plot-by-color loop
   const [conn, setConn] = useState<Conn>("checking");
   const [busy, setBusy] = useState(false);
   const [plotting, setPlotting] = useState(false);
@@ -108,6 +110,58 @@ export function AxiDrawPanel() {
     }
   };
 
+  // Multi-pen plot: one pass per stroke colour, pausing for a pen swap between
+  // groups. Mirrors PlotterPanel.plotByColor (GRBL). The origin is NEVER re-set
+  // between groups — the head stays put (pen up, motors energised), you only
+  // swap the pen in the holder, so the colours register on top of each other.
+  const doPlotByColor = async () => {
+    if (!artwork) return;
+    const groups = splitByStroke(artwork.polylines);
+    if (groups.length < 2) return doPlot(); // single colour → normal plot
+    cancelRef.current = false;
+    setPlotting(true);
+    setBusy(true);
+    try {
+      for (let gi = 0; gi < groups.length; gi++) {
+        if (cancelRef.current) {
+          setMsg("Stopped ✓");
+          break;
+        }
+        const grp = groups[gi];
+        if (gi > 0) {
+          await b.penUp(profile); // lift; head holds position (no re-home)
+          const cont = window.confirm(
+            `Stift ${gi + 1}/${groups.length} einsetzen: ${grp.stroke}\n\n` +
+              `Nullpunkt NICHT anfassen — nur Stift im Halter wechseln.\n\n` +
+              `OK = weiter plotten · Abbrechen = stoppen.`,
+          );
+          if (!cont) {
+            cancelRef.current = true;
+            setMsg("Stopped ✓");
+            break;
+          }
+        }
+        setMsg(`Plotting ${gi + 1}/${groups.length} (${grp.stroke})… (Stop to abort)`);
+        const svg = svgExport(
+          { ...artwork, polylines: grp.polylines },
+          { dedupe, join, strokeWidthMm: penWidthMm },
+        );
+        const r = await b.plot(svg, profile, speed, accel, delayDown, delayUp);
+        if (!r.ok) {
+          setMsg(`Plot ${gi + 1}/${groups.length} stopped: ${r.message ?? ""}`);
+          break;
+        }
+        if (gi === groups.length - 1) setMsg(`Plot ✓ done (${groups.length} Stifte)`);
+      }
+    } catch (e) {
+      if (e instanceof BridgeUnreachable) setConn("offline");
+      setMsg(`Plot failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setPlotting(false);
+      setBusy(false);
+    }
+  };
+
   const doOutline = async (dry: boolean) => {
     if (!artwork) return;
     const [minX, minY, maxX, maxY] = bbox(artwork);
@@ -117,6 +171,7 @@ export function AxiDrawPanel() {
 
   const doStop = async () => {
     // Stop bypasses the busy gate — it must interrupt a running plot.
+    cancelRef.current = true; // break the plot-by-color loop between groups
     setMsg("Stopping…");
     try {
       const r = await b.stop();
@@ -140,6 +195,10 @@ export function AxiDrawPanel() {
   }
 
   const offline = conn === "offline";
+  // Distinct stroke colours in the artwork → enables the multi-pen plot.
+  const penCount = artwork
+    ? new Set(artwork.polylines.map((l) => l.stroke ?? "#000000")).size
+    : 0;
 
   return (
     <div style={box}>
@@ -229,6 +288,18 @@ export function AxiDrawPanel() {
           disabled={busy || offline || !artwork}
         >
           Plot
+        </button>
+        <button
+          style={{ ...btn, fontWeight: 600 }}
+          onClick={doPlotByColor}
+          disabled={busy || offline || !artwork || penCount < 2}
+          title={
+            penCount < 2
+              ? "Plot je Farbe — aktiv ab 2 Stroke-Farben (z.B. Voronoi Moiré)"
+              : `Plottet ${penCount} Farben nacheinander, Pause für Stift-Wechsel zwischen den Lagen (Nullpunkt bleibt)`
+          }
+        >
+          Plot je Farbe{penCount >= 2 ? ` (${penCount})` : ""}
         </button>
         <button style={btn} onClick={doStop} disabled={offline}>
           Stop
