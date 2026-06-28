@@ -13,7 +13,6 @@ import {
 } from "./layout/kit";
 
 type Params = {
-  template: "classic";
   header: string;
   title: string;
   subtitle: string;
@@ -34,7 +33,6 @@ type Params = {
 };
 
 const DEFAULTS: Params = {
-  template: "classic",
   header: "",
   title: "OMEGA CALIBER 321",
   subtitle: "",
@@ -66,7 +64,6 @@ export const blueprint: GeneratorDef<Params> = {
     "format (80×80, 100×100, 148×210, 210×297).",
   defaults: DEFAULTS,
   schema: {
-    template: { value: DEFAULTS.template, options: ["classic"] },
     header: { value: DEFAULTS.header },
     title: { value: DEFAULTS.title },
     subtitle: { value: DEFAULTS.subtitle },
