@@ -3,10 +3,14 @@
 // Spec: docs/superpowers/specs/2026-06-04-blueprint-layout-module-design.md
 // Reads the imported motif from the app store (only impurity — same motif +
 // same params → identical output; seed is unused, the layout has no randomness).
-import type { GeneratorDef, Point, Polyline } from "./types";
-import { layoutTextStrokes, FONT_IDS, type HersheyFontId } from "./text";
-import { fitToCanvas, polylineBounds } from "../util/path";
-import { useApp } from "../state/store";
+import type { GeneratorDef, Polyline } from "./types";
+import { FONT_IDS, type HersheyFontId } from "./text";
+import {
+  textBlock,
+  translateLines,
+  placeMotif,
+  drawFrame,
+} from "./layout/kit";
 
 type Params = {
   template: "classic";
@@ -48,51 +52,8 @@ const DEFAULTS: Params = {
   accentColor: "#1a3a52",
 };
 
-const LETTER_SPACING = 2; // font units — matches the text generator's feel
-const LINE_SPACING = 1.3;
-const CAP_UNITS = 21; // Hershey glyph extent (cap −12 … baseline 9)
-
 /** Minimum fraction of inner height reserved for the motif slot. */
 const MIN_SLOT_FRAC = 0.2;
-
-type Block = { lines: Polyline[]; wMm: number; hMm: number };
-
-/**
- * Lay out a text block in mm, local coords: glyph bbox top at y=0, centered on
- * x=0. Empty/whitespace-only text → null (the slot collapses, per spec).
- * Caps at capMm; if the widest line would exceed maxWMm the block scales down.
- */
-function block(
-  str: string,
-  font: HersheyFontId,
-  capMm: number,
-  maxWMm: number,
-  stroke?: string,
-): Block | null {
-  const t = str.trim();
-  if (!t) return null;
-  const strokes = layoutTextStrokes(t, LETTER_SPACING, LINE_SPACING, font);
-  const raw: Polyline[] = strokes
-    .filter((s) => s.points.length >= 2)
-    .map((s) => ({ points: s.points, closed: false, stroke }));
-  if (raw.length === 0) return null;
-  const b = polylineBounds(raw);
-  const wUnits = b.maxX - b.minX || 1;
-  const hUnits = b.maxY - b.minY || 1;
-  let scale = capMm / CAP_UNITS;
-  if (wUnits * scale > maxWMm) scale = maxWMm / wUnits;
-  const lines = raw.map((l) => ({
-    ...l,
-    points: l.points.map(([x, y]): Point => [
-      (x - (b.minX + b.maxX) / 2) * scale,
-      (y - b.minY) * scale,
-    ]),
-  }));
-  return { lines, wMm: wUnits * scale, hMm: hUnits * scale };
-}
-
-const translate = (lines: Polyline[], dx: number, dy: number): Polyline[] =>
-  lines.map((l) => ({ ...l, points: l.points.map(([x, y]): Point => [x + dx, y + dy]) }));
 
 export const blueprint: GeneratorDef<Params> = {
   id: "blueprint",
@@ -126,33 +87,12 @@ export const blueprint: GeneratorDef<Params> = {
     const out: Polyline[] = [];
     const accent = (t: "frame" | "meta") => (p.accentTarget === t ? p.accentColor : undefined);
 
-    // Frame — always polylines[0] (blueprint-test relies on it).
+    // Frame + corner marks (frame is always polylines[0] — blueprint-test relies on it).
+    out.push(...drawFrame(canvas, p.frameInsetMm, p.cornerMarks, accent("frame")));
     const fx0 = p.frameInsetMm;
     const fy0 = p.frameInsetMm;
     const fx1 = canvas.wMm - p.frameInsetMm;
     const fy1 = canvas.hMm - p.frameInsetMm;
-    out.push({
-      closed: true,
-      stroke: accent("frame"),
-      points: [[fx0, fy0], [fx1, fy0], [fx1, fy1], [fx0, fy1]],
-    });
-
-    // Corner marks: crop-mark style, outside the frame, aligned with its edges.
-    if (p.cornerMarks) {
-      const o = 2;
-      // marks live in the inset band: 2mm off the frame, 1–4mm long, never past the canvas edge
-      const len = Math.max(1, Math.min(4, p.frameInsetMm - o - 0.5));
-      const corners: [number, number, number, number][] = [
-        [fx0, fy0, -1, -1],
-        [fx1, fy0, 1, -1],
-        [fx1, fy1, 1, 1],
-        [fx0, fy1, -1, 1],
-      ];
-      for (const [x, y, sxn, syn] of corners) {
-        out.push({ closed: false, points: [[x + sxn * o, y], [x + sxn * (o + len), y]] });
-        out.push({ closed: false, points: [[x, y + syn * o], [x, y + syn * (o + len)]] });
-      }
-    }
 
     // Inner content area.
     const pad = Math.max(3, Math.min(canvas.wMm, canvas.hMm) * 0.03);
@@ -173,11 +113,11 @@ export const blueprint: GeneratorDef<Params> = {
       const gap = metaMm * 0.9 * s;
       // gap above title scales with title size (visual weight), unlike the meta-driven inter-slot gap
       const titleGap = titleMm * 0.8 * s;
-      const header   = block(p.header.toUpperCase(), p.metaFont, metaMm * s, maxW);
-      const title    = block(p.title.toUpperCase(), p.titleFont, titleMm * s, maxW);
-      const subtitle = block(p.subtitle, p.metaFont, metaMm * 1.1 * s, maxW);
-      const meta     = block(p.meta, p.metaFont, metaMm * s, maxW, accent("meta"));
-      const footer   = block(p.footer, p.metaFont, metaMm * 0.8 * s, maxW);
+      const header   = textBlock(p.header.toUpperCase(), p.metaFont, metaMm * s, maxW);
+      const title    = textBlock(p.title.toUpperCase(), p.titleFont, titleMm * s, maxW);
+      const subtitle = textBlock(p.subtitle, p.metaFont, metaMm * 1.1 * s, maxW);
+      const meta     = textBlock(p.meta, p.metaFont, metaMm * s, maxW, accent("meta"));
+      const footer   = textBlock(p.footer, p.metaFont, metaMm * 0.8 * s, maxW);
       return { gap, titleGap, header, title, subtitle, meta, footer };
     };
 
@@ -205,7 +145,7 @@ export const blueprint: GeneratorDef<Params> = {
     // Top-down: header.
     let top = iy0;
     if (header) {
-      out.push(...translate(header.lines, cx, top));
+      out.push(...translateLines(header.lines, cx, top));
       top += header.hMm + gap;
     }
 
@@ -213,51 +153,28 @@ export const blueprint: GeneratorDef<Params> = {
     let bottom = iy1;
     if (footer) {
       bottom -= footer.hMm;
-      out.push(...translate(footer.lines, cx, bottom));
+      out.push(...translateLines(footer.lines, cx, bottom));
       bottom -= gap;
     }
     if (meta) {
       bottom -= meta.hMm;
-      out.push(...translate(meta.lines, cx, bottom));
+      out.push(...translateLines(meta.lines, cx, bottom));
       bottom -= gap;
     }
     if (subtitle) {
       bottom -= subtitle.hMm;
-      out.push(...translate(subtitle.lines, cx, bottom));
+      out.push(...translateLines(subtitle.lines, cx, bottom));
       bottom -= gap;
     }
     if (title) {
       bottom -= title.hMm;
-      out.push(...translate(title.lines, cx, bottom));
+      out.push(...translateLines(title.lines, cx, bottom));
       bottom -= titleGap; // breathing room between motif and title
     }
 
     // Motif slot: whatever vertical space remains.
-    // Math.max(1, …) is purely numeric safety — after scaling, slot is ≥ minSlotMm whenever any text exists.
     const slotH = Math.max(1, bottom - top);
-    const mw = maxW * p.motifScale;
-    const mh = slotH * p.motifScale;
-    const mx = ix0 + (maxW - mw) / 2;
-    const my = top + (slotH - mh) / 2;
-    const motif = useApp.getState().motif;
-    if (motif && motif.polylines.length > 0) {
-      // Exact quarter-turn rotation (no trig — keeps coordinates bit-exact);
-      // fitToCanvas re-fits and re-centers the rotated bounds afterwards.
-      const ROT: Record<number, (pt: Point) => Point> = {
-        0: ([x, y]) => [x, y],
-        90: ([x, y]) => [-y, x],
-        180: ([x, y]) => [-x, -y],
-        270: ([x, y]) => [y, -x],
-      };
-      const rot = ROT[p.motifRotation] ?? ROT[0];
-      const rotated = motif.polylines.map((l) => ({ ...l, points: l.points.map(rot) }));
-      out.push(...translate(fitToCanvas(rotated, mw, mh, 0), mx, my));
-    } else {
-      // Placeholder: slot box + diagonals, so the layout stays tunable.
-      out.push({ closed: true, points: [[mx, my], [mx + mw, my], [mx + mw, my + mh], [mx, my + mh]] });
-      out.push({ closed: false, points: [[mx, my], [mx + mw, my + mh]] });
-      out.push({ closed: false, points: [[mx + mw, my], [mx, my + mh]] });
-    }
+    out.push(...placeMotif({ x: ix0, y: top, w: maxW, h: slotH }, p.motifScale, p.motifRotation));
 
     return { polylines: out, widthMm: canvas.wMm, heightMm: canvas.hMm };
   },
