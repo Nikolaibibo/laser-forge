@@ -51,6 +51,8 @@
   --z-drawer: 20;
   --z-gallery: 30;
   --z-toast: 50;
+
+  --shadow-overlay: rgba(0, 0, 0, 0.45);
 }
 
 html, body, #root {
@@ -1211,7 +1213,7 @@ input, select, textarea, button {
   flex-direction: column;
   background: var(--bg-panel);
   border-top: 1px solid var(--line-strong);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 -4px 24px var(--shadow-overlay);
 
   /* Slide-up entry */
   animation: drawerSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;

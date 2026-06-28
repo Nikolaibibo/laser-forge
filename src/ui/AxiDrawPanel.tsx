@@ -225,8 +225,8 @@ export function AxiDrawPanel() {
 
 const box: React.CSSProperties = {
   padding: 12,
-  borderTop: "1px solid var(--border-color)",
-  background: "var(--bg-sidebar)",
+  borderTop: "1px solid var(--line)",
+  background: "var(--bg-panel)",
   color: "var(--text-secondary)",
   fontSize: 12,
   display: "flex",
@@ -241,9 +241,9 @@ const row: React.CSSProperties = {
 };
 const btn: React.CSSProperties = {
   padding: "5px 10px",
-  background: "var(--bg-card)",
+  background: "var(--bg-raised)",
   color: "var(--text-primary)",
-  border: "1px solid var(--border-color)",
+  border: "1px solid var(--line)",
   borderRadius: 6,
   cursor: "pointer",
   fontFamily: "inherit",
@@ -256,7 +256,7 @@ const code: React.CSSProperties = {
   margin: "0 4px",
   padding: "1px 5px",
   background: "var(--bg-hover)",
-  border: "1px solid var(--border-color)",
+  border: "1px solid var(--line)",
   borderRadius: 4,
   fontFamily: "var(--font-mono)",
   fontSize: 10,
