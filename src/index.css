@@ -21,31 +21,33 @@
   --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Colors */
-  --bg-base: #faf9f5;
-  --bg-sidebar: rgba(244, 243, 238, 0.85);
-  --bg-card: #ffffff;
-  --bg-input: #ffffff;
-  --bg-hover: #f2efe8;
-  --border-color: rgba(0, 0, 0, 0.06);
-  --border-focus: rgba(255, 107, 74, 0.4);
-  
-  --accent: #ff6b4a;
-  --accent-hover: #ff8166;
-  --accent-glow: rgba(255, 107, 74, 0.12);
-  
-  --text-primary: #2c2a27;
-  --text-secondary: #787670;
-  --text-muted: #a4a29a;
-  
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-blur: blur(12px);
-  --glass-border: 1px solid rgba(0, 0, 0, 0.06);
-  --glass-shadow: 0 8px 32px 0 rgba(142, 137, 122, 0.1);
+  /* Chrome (cool charcoal) */
+  --bg-chrome: #11151b;
+  --bg-panel: #161b22;
+  --bg-raised: #1c222b;
+  --bg-hover: #232a34;
+  --bg-canvas: #f7f8fa;          /* the plotter "bed" stays bright */
 
-  /* Canvas preview */
-  --paper-bg: #ffffff;
-  --paper-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
+  --line: #2a313b;               /* 1px hairlines */
+  --line-strong: #39424f;
+
+  --text-primary: #e6e9ee;
+  --text-secondary: #aab2bf;
+  --text-muted: #8b95a3;
+
+  --accent: #f97316;             /* laser-orange */
+  --accent-hover: #fb8a3c;
+  --accent-glow: rgba(249, 115, 22, 0.16);
+  --ok: #3fb950;
+  --err: #f85149;
+
+  --space: 8px;
+  --radius: 4px;
+
+  --z-raised: 10;
+  --z-drawer: 20;
+  --z-gallery: 30;
+  --z-toast: 50;
 }
 
 html, body, #root {
@@ -53,7 +55,7 @@ html, body, #root {
   padding: 0;
   height: 100%;
   width: 100%;
-  background: var(--bg-base);
+  background: var(--bg-chrome);
   color: var(--text-primary);
   font-family: var(--font-sans);
   overflow: hidden;
@@ -92,15 +94,6 @@ input, select, textarea, button {
   font-family: inherit;
 }
 
-/* Glassmorphism panel styling */
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: var(--glass-shadow);
-}
-
 /* Micro-animations */
 /* NOTE: opacity-only on purpose. This fade is applied to the draggable
    ExportBar, whose position is driven by an inline `transform`. A keyframe
@@ -121,107 +114,10 @@ input, select, textarea, button {
 
 /* Plotter bed background grid pattern */
 .plotter-bed-grid {
-  background-color: #f1f0e8;
-  background-image: 
-    radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 0),
-    radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 0);
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 0),
+    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 0);
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
-}
-
-/* Custom themed styling overrides for Leva UI */
-#leva__root {
-  width: 100% !important;
-  margin: 0 !important;
-}
-
-#leva__root > div {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.leva-c-titleBar {
-  background: transparent !important;
-  border-bottom: 1px solid var(--border-color) !important;
-  padding: 12px 14px !important;
-  font-family: var(--font-sans) !important;
-  font-weight: 700 !important;
-  font-size: 11px !important;
-  letter-spacing: 1px !important;
-  text-transform: uppercase !important;
-  color: var(--text-secondary) !important;
-}
-
-.leva-c-folder {
-  border-bottom: 1px solid var(--border-color) !important;
-  background: transparent !important;
-}
-
-.leva-c-folder > div {
-  background: transparent !important;
-}
-
-.leva-c-folder button {
-  font-family: var(--font-sans) !important;
-  font-weight: 600 !important;
-  font-size: 11px !important;
-  letter-spacing: 0.5px !important;
-  color: var(--text-primary) !important;
-  padding: 8px 12px !important;
-}
-
-.leva-c-label {
-  font-family: var(--font-sans) !important;
-  font-size: 11px !important;
-  color: var(--text-secondary) !important;
-}
-
-.leva-c-value {
-  font-family: var(--font-mono) !important;
-  font-size: 10px !important;
-}
-
-.leva-c-slider {
-  background: var(--bg-hover) !important;
-  border-radius: 3px !important;
-  height: 4px !important;
-}
-
-.leva-c-slider > div {
-  background: var(--accent) !important;
-  border-radius: 3px !important;
-}
-
-.leva-c-slider-handle {
-  background: #ffffff !important;
-  border: 1px solid var(--accent) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
-  width: 10px !important;
-  height: 10px !important;
-  border-radius: 50% !important;
-}
-
-.leva-c-input {
-  background: var(--bg-input) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 4px !important;
-  color: var(--text-primary) !important;
-  font-family: var(--font-sans) !important;
-}
-
-.leva-c-input:focus-within {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--accent) !important;
-}
-
-.leva-c-select {
-  background: var(--bg-input) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 4px !important;
-  color: var(--text-primary) !important;
-  padding: 3px 6px !important;
-}
-
-.leva-c-checkbox {
-  accent-color: var(--accent) !important;
 }
