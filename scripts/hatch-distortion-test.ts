@@ -36,7 +36,7 @@ const art: Artwork = { widthMm: 100, heightMm: 100, polylines: [closedSquare, op
 {
   const one = hatch.apply(art, { ...hatch.defaults, keepOutline: false, layers: 1, spacingMm: 2 }, 1);
   const three = hatch.apply(art, { ...hatch.defaults, keepOutline: false, layers: 3, spacingMm: 2 }, 1);
-  const fillCount = (a: Artwork) => a.polylines.filter((l) => l.points[1]?.[0] !== 20).length;
+  const fillCount = (a: Artwork) => a.polylines.filter((l) => l !== openLine).length;
   assert.ok(fillCount(three) > fillCount(one), "3 layers add more fill than 1");
 }
 

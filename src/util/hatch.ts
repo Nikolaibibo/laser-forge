@@ -27,7 +27,7 @@ export function scanlineSpans(poly: Point[], spacingMm: number): ScanRow[] {
         xs.push(x0 + (x1 - x0) * t);
       }
     }
-    if (xs.length < 2) continue;
+    if (xs.length < 2) continue; // odd/degenerate crossing count (grazed vertex) → skip row
     xs.sort((a, b) => a - b);
     const spans: [number, number][] = [];
     for (let k = 0; k + 1 < xs.length; k += 2) spans.push([xs[k], xs[k + 1]]);
@@ -68,7 +68,9 @@ export function linkBoustrophedon(rows: ScanRow[]): Point[][] {
         next.push({ pts: [[x0, y], [x1, y]], lo: x0, hi: x1 });
       }
     }
-    // Any previously-active chain not continued this row is finished.
+    // Finish chains not continued this row. The !next.includes(c) guard is load-
+    // bearing: an extended chain is the SAME object in both `active` and `next`,
+    // so without it continued chains would be double-flushed into `done`.
     active.forEach((c, i) => { if (!used.has(i) && !next.includes(c)) done.push(c.pts); });
     active = next;
   }
