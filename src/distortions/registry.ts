@@ -5,9 +5,10 @@ import { kaleidoscope } from "./kaleidoscope";
 import { textKnockout } from "./textKnockout";
 import { rotate } from "./rotate";
 import { pathJoin } from "./pathJoin";
+import { hatch } from "./hatch";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const DISTORTIONS: DistortionDef<any>[] = [noiseWarp, chaikin, kaleidoscope, textKnockout, rotate, pathJoin];
+export const DISTORTIONS: DistortionDef<any>[] = [noiseWarp, chaikin, kaleidoscope, textKnockout, rotate, pathJoin, hatch];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const distortionById = (id: string): DistortionDef<any> | undefined =>

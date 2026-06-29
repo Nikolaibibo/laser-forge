@@ -52,7 +52,7 @@ Pattern-, Layout- und Import-Generatoren — siehe `registry.ts`.
 **Input-getrieben:** `TSP Art` liest ein hochgeladenes Bild (IMAGE-Block im
 Inspector), die Layout-/Pattern-Generatoren ein importiertes SVG (MOTIF-Block).
 
-## Distortions (6)
+## Distortions (7)
 
 | Name | Was es tut |
 |------|-----------|
@@ -62,6 +62,7 @@ Inspector), die Layout-/Pattern-Generatoren ein importiertes SVG (MOTIF-Block).
 | **Rotate Page** | Ganzes Artwork in Viertelschritten drehen (90/270 tauschen Breite und Höhe) — z.B. Landscape-Design auf Portrait-Hardware plotten |
 | **Text Knockout** | Text als Negativfläche in das darunterliegende Artwork schneiden — Muster-Hintergrund mit freistehenden Buchstaben |
 | **Path Join** | Offene Polylinien, die sich Endpunkte teilen, zu langen Pfaden verketten → drastisch weniger Stift-Absetzer beim Plotten |
+| **Hatch** | Geschlossene Shapes mit Schraffur füllen (boustrophedon-verbunden, weniger Stift-Absetzer); 1–3 Lagen Cross-Hatch für Tonwerte |
 
 **Kombiniert:** Rose → Kaleidoscope(8) → Noise Warp → Chaikin = ein komplett
 eigener Look aus ein paar Klicks.
