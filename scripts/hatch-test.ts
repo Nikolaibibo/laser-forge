@@ -1,7 +1,7 @@
 // scripts/hatch-test.ts — unit tests for src/util/hatch.ts
 // Run: npx tsx scripts/hatch-test.ts
 import assert from "node:assert/strict";
-import { scanlineSpans, linkBoustrophedon } from "../src/util/hatch";
+import { scanlineSpans, linkBoustrophedon, hatchPolygon } from "../src/util/hatch";
 import type { Point } from "../src/generators/types";
 
 const square: Point[] = [[0, 0], [10, 0], [10, 10], [0, 10]];
@@ -58,5 +58,33 @@ assert.equal(scanlineSpans([[0, 0], [1, 1]], 1).length, 0, "< 3 pts → no rows"
   assert.ok(sorted[1].avg > 5, "right run centered on right arm");
 }
 assert.equal(linkBoustrophedon([]).length, 0, "no rows → no runs");
+
+// --- hatchPolygon --------------------------------------------------
+const within = (p: Point, lo: number, hi: number) =>
+  p[0] >= lo - 1e-6 && p[0] <= hi + 1e-6 && p[1] >= lo - 1e-6 && p[1] <= hi + 1e-6;
+
+{
+  const fills = hatchPolygon(square, 0, 2); // horizontal lines
+  assert.ok(fills.length >= 1, "produces fill");
+  assert.equal(fills[0].closed, false, "fill is open");
+  for (const f of fills) for (const p of f.points) assert.ok(within(p, 0, 10), "stays in bbox");
+  // angle 0 → first drawn segment is horizontal (equal y).
+  assert.ok(Math.abs(fills[0].points[0][1] - fills[0].points[1][1]) < 1e-6, "horizontal at angle 0");
+}
+{
+  const fills = hatchPolygon(square, 90, 2); // vertical lines
+  assert.ok(fills.length >= 1, "angle 90 produces fill");
+  for (const f of fills) for (const p of f.points) assert.ok(within(p, 0, 10), "stays in bbox");
+  // angle 90 → first drawn segment is vertical (equal x).
+  assert.ok(Math.abs(fills[0].points[0][0] - fills[0].points[1][0]) < 1e-6, "vertical at angle 90");
+}
+{
+  const plain = hatchPolygon(square, 0, 2);
+  const inset = hatchPolygon(square, 0, 2, { insetMm: 2 });
+  const maxX = (fs: typeof inset) => Math.max(...fs.flatMap((f) => f.points.map((p) => p[0])));
+  assert.ok(maxX(inset) < maxX(plain), "inset pulls fill in from the edge");
+}
+assert.equal(hatchPolygon(square, 0, 0).length, 0, "spacing 0 → no fill");
+assert.equal(hatchPolygon([[0, 0], [1, 1]], 0, 1).length, 0, "< 3 pts → no fill");
 
 console.log("hatch: all checks passed ✓");

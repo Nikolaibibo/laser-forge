@@ -1,7 +1,8 @@
 // src/util/hatch.ts — fill a single closed contour with hatch lines.
 // scanlineSpans: horizontal even-odd scanlines (hatch direction = x-axis).
-// linkBoustrophedon + hatchPolygon are added by later tasks.
-import type { Point } from "../generators/types";
+// linkBoustrophedon: chain spans into boustrophedon (zigzag) runs.
+// hatchPolygon: rotation wrapper (arbitrary angle) + edge inset over the two.
+import type { Point, Polyline } from "../generators/types";
 
 export type ScanRow = { y: number; spans: [number, number][] };
 
@@ -73,4 +74,47 @@ export function linkBoustrophedon(rows: ScanRow[]): Point[][] {
   }
   for (const c of active) done.push(c.pts);
   return done.filter((p) => p.length >= 2);
+}
+
+const rot = (x: number, y: number, cx: number, cy: number, ca: number, sa: number): Point => {
+  const dx = x - cx, dy = y - cy;
+  return [cx + dx * ca - dy * sa, cy + dx * sa + dy * ca];
+};
+
+/** Fill one closed contour with hatch lines at `angleDeg`, `spacingMm` apart.
+ *  Rotates so the hatch is horizontal, scans + boustrophedon-links, optional
+ *  inset, then rotates back. Returns open polylines. */
+export function hatchPolygon(
+  poly: Point[], angleDeg: number, spacingMm: number,
+  opts: { insetMm?: number } = {},
+): Polyline[] {
+  if (poly.length < 3 || !(spacingMm > 0)) return [];
+  const inset = Math.max(0, opts.insetMm ?? 0);
+  const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
+  const cy = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+  const a = (angleDeg * Math.PI) / 180;
+  const caNeg = Math.cos(-a), saNeg = Math.sin(-a); // rotate hatch → horizontal
+  const rp = poly.map(([x, y]) => rot(x, y, cx, cy, caNeg, saNeg));
+
+  let rows = scanlineSpans(rp, spacingMm);
+  if (inset > 0 && rows.length > 0) {
+    let miny = Infinity, maxy = -Infinity;
+    for (const { y } of rows) { if (y < miny) miny = y; if (y > maxy) maxy = y; }
+    rows = rows
+      .filter((r) => r.y >= miny + inset && r.y <= maxy - inset)
+      .map((r) => ({
+        y: r.y,
+        spans: r.spans
+          .map(([x0, x1]) => [x0 + inset, x1 - inset] as [number, number])
+          .filter(([x0, x1]) => x1 > x0),
+      }))
+      .filter((r) => r.spans.length > 0);
+  }
+
+  const runs = linkBoustrophedon(rows);
+  const caPos = Math.cos(a), saPos = Math.sin(a); // rotate back
+  return runs.map((pts) => ({
+    points: pts.map(([x, y]) => rot(x, y, cx, cy, caPos, saPos)),
+    closed: false,
+  }));
 }
