@@ -34,3 +34,43 @@ export function scanlineSpans(poly: Point[], spacingMm: number): ScanRow[] {
   }
   return rows;
 }
+
+/** Link span rows into continuous boustrophedon (zigzag) point-runs.
+ *  Same coordinate frame as `rows`. See header comment for the matching rule. */
+export function linkBoustrophedon(rows: ScanRow[]): Point[][] {
+  type Chain = { pts: Point[]; lo: number; hi: number };
+  const overlaps = (a0: number, a1: number, b0: number, b1: number) =>
+    Math.min(a1, b1) >= Math.max(a0, b0);
+
+  let active: Chain[] = [];
+  const done: Point[][] = [];
+
+  for (const { y, spans } of rows) {
+    const next: Chain[] = [];
+    const used = new Set<number>();
+    for (const [x0, x1] of spans) {
+      const matches: number[] = [];
+      active.forEach((c, i) => {
+        if (!used.has(i) && overlaps(c.lo, c.hi, x0, x1)) matches.push(i);
+      });
+      if (matches.length === 1) {
+        const c = active[matches[0]];
+        used.add(matches[0]);
+        const last = c.pts[c.pts.length - 1];
+        // Enter at the end nearer the chain's last point, exit at the far end.
+        if (Math.abs(last[0] - x0) <= Math.abs(last[0] - x1)) c.pts.push([x0, y], [x1, y]);
+        else c.pts.push([x1, y], [x0, y]);
+        c.lo = x0; c.hi = x1;
+        next.push(c);
+      } else {
+        // 0 matches (new region) or >1 (merge) → start a fresh chain.
+        next.push({ pts: [[x0, y], [x1, y]], lo: x0, hi: x1 });
+      }
+    }
+    // Any previously-active chain not continued this row is finished.
+    active.forEach((c, i) => { if (!used.has(i) && !next.includes(c)) done.push(c.pts); });
+    active = next;
+  }
+  for (const c of active) done.push(c.pts);
+  return done.filter((p) => p.length >= 2);
+}

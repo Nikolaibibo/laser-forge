@@ -1,7 +1,7 @@
 // scripts/hatch-test.ts — unit tests for src/util/hatch.ts
 // Run: npx tsx scripts/hatch-test.ts
 import assert from "node:assert/strict";
-import { scanlineSpans } from "../src/util/hatch";
+import { scanlineSpans, linkBoustrophedon } from "../src/util/hatch";
 import type { Point } from "../src/generators/types";
 
 const square: Point[] = [[0, 0], [10, 0], [10, 10], [0, 10]];
@@ -30,5 +30,24 @@ const uShape: Point[] = [
 }
 assert.equal(scanlineSpans(square, 0).length, 0, "spacing 0 → no rows");
 assert.equal(scanlineSpans([[0, 0], [1, 1]], 1).length, 0, "< 3 pts → no rows");
+
+// --- linkBoustrophedon ---------------------------------------------
+{
+  const rows = scanlineSpans(square, 2);
+  const runs = linkBoustrophedon(rows);
+  assert.equal(runs.length, 1, "convex → one continuous run");
+  assert.equal(runs[0].length, 10, "5 rows × 2 points = 10 points");
+  // Boustrophedon: consecutive segment direction alternates.
+  assert.equal(runs[0][0][0], 0, "starts at x=0");
+  assert.equal(runs[0][1][0], 10, "first line L→R");
+  assert.equal(runs[0][2][0], 10, "drops down on the right");
+  assert.equal(runs[0][3][0], 0, "second line R→L (snake)");
+}
+{
+  const runs = linkBoustrophedon(scanlineSpans(uShape, 2));
+  assert.equal(runs.length, 2, "U splits into two arm-runs");
+  for (const r of runs) assert.ok(r.length >= 2, "each run is drawable");
+}
+assert.equal(linkBoustrophedon([]).length, 0, "no rows → no runs");
 
 console.log("hatch scanlineSpans: all checks passed ✓");
