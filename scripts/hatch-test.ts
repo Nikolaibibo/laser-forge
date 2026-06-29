@@ -21,10 +21,10 @@ const uShape: Point[] = [
 }
 {
   const rows = scanlineSpans(uShape, 2); // rows at y = 1,3,5,7,9
-  const low = rows.find((r) => r.y === 1)!;
+  const low = rows[0];
   assert.equal(low.spans.length, 1, "below opening → 1 span");
   assert.deepEqual(low.spans[0], [0, 10], "solid base full width");
-  const mid = rows.find((r) => r.y === 5)!;
+  const mid = rows[2];
   assert.equal(mid.spans.length, 2, "in the opening → 2 spans");
   assert.deepEqual(mid.spans, [[0, 3], [7, 10]], "two arms");
 }
