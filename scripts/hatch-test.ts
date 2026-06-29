@@ -47,7 +47,16 @@ assert.equal(scanlineSpans([[0, 0], [1, 1]], 1).length, 0, "< 3 pts → no rows"
   const runs = linkBoustrophedon(scanlineSpans(uShape, 2));
   assert.equal(runs.length, 2, "U splits into two arm-runs");
   for (const r of runs) assert.ok(r.length >= 2, "each run is drawable");
+  // Verify geometric separation: each run's x-range center should favor one arm.
+  const ranges = runs.map((r) => {
+    const xs = r.map((p) => p[0]);
+    return { min: Math.min(...xs), max: Math.max(...xs), avg: xs.reduce((a, b) => a + b) / xs.length };
+  });
+  // One run should have avg < 5 (left arm), one should have avg > 5 (right arm).
+  const sorted = ranges.sort((a, b) => a.avg - b.avg);
+  assert.ok(sorted[0].avg < 5, "left run centered on left arm");
+  assert.ok(sorted[1].avg > 5, "right run centered on right arm");
 }
 assert.equal(linkBoustrophedon([]).length, 0, "no rows → no runs");
 
-console.log("hatch scanlineSpans: all checks passed ✓");
+console.log("hatch: all checks passed ✓");
