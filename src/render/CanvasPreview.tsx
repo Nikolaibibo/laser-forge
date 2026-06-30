@@ -19,16 +19,22 @@ export function CanvasPreview({ artwork }: Props) {
     const draw = () => {
       const rect = wrap.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      // Fit artwork into wrap maintaining aspect ratio
+      // Available box = wrap minus its padding (getBoundingClientRect includes it).
+      const cs = getComputedStyle(wrap);
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      const availW = Math.max(0, rect.width - padX);
+      const availH = Math.max(0, rect.height - padY);
+      // Fit artwork into the available box maintaining aspect ratio
       const artRatio = artwork.widthMm / artwork.heightMm;
-      const wrapRatio = rect.width / rect.height;
+      const wrapRatio = availW / availH;
       let dispW: number, dispH: number;
       if (artRatio > wrapRatio) {
-        dispW = rect.width;
-        dispH = rect.width / artRatio;
+        dispW = availW;
+        dispH = availW / artRatio;
       } else {
-        dispH = rect.height;
-        dispW = rect.height * artRatio;
+        dispH = availH;
+        dispW = availH * artRatio;
       }
       canvas.style.width = `${dispW}px`;
       canvas.style.height = `${dispH}px`;
