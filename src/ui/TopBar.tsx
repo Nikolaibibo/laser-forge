@@ -1,5 +1,11 @@
 import { useApp } from "../state/store";
 import { writeHash } from "../state/urlSync";
+import {
+  PAGE_FORMATS,
+  detectPageFormat,
+  pageFormatSize,
+  type PageFormatId,
+} from "../util/pageFormats";
 
 const clamp = (v: number) =>
   Number.isFinite(v) ? Math.min(1000, Math.max(10, v)) : 10;
@@ -42,6 +48,30 @@ export function TopBar() {
       </div>
 
       <div className="lf-topbar-center">
+        {/* Page format preset → sets canvas W×H; "Custom" when W×H matches no preset */}
+        <label className="lf-field">
+          <span className="lf-field-label">Format</span>
+          <select
+            className="lf-field-input"
+            value={detectPageFormat(w, h)}
+            onChange={(e) => {
+              const size = pageFormatSize(e.target.value as PageFormatId);
+              if (size) setCanvas(size.wMm, size.hMm);
+            }}
+          >
+            {detectPageFormat(w, h) === "custom" && (
+              <option value="custom">Custom</option>
+            )}
+            {PAGE_FORMATS.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <span className="lf-divider-char">·</span>
+
         {/* Canvas W × H */}
         <label className="lf-field">
           <span className="lf-field-label">W</span>
