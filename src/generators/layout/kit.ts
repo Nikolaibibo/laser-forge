@@ -82,16 +82,22 @@ export function placeMotif(
   ];
 }
 
+export type FrameStyle = "none" | "single" | "double";
+
 /**
- * Frame rect (always element [0]) + optional crop-style corner marks (8 segments).
- * Marks live in the inset band: 2mm off the frame, 1–4mm long.
+ * Frame rect (element [0] for "single"/"double") + optional crop-style corner
+ * marks (8 segments). Marks live in the inset band: 2mm off the frame, 1–4mm.
+ * "none" → no frame and no marks (returns []). "double" → outer rect + a second
+ * rect inset a further 1.5mm.
  */
 export function drawFrame(
   canvas: Canvas,
   insetMm: number,
   cornerMarks: boolean,
   stroke?: string,
+  frameStyle: FrameStyle = "single",
 ): Polyline[] {
+  if (frameStyle === "none") return [];
   const fx0 = insetMm;
   const fy0 = insetMm;
   const fx1 = canvas.wMm - insetMm;
@@ -99,6 +105,14 @@ export function drawFrame(
   const out: Polyline[] = [
     { closed: true, stroke, points: [[fx0, fy0], [fx1, fy0], [fx1, fy1], [fx0, fy1]] },
   ];
+  if (frameStyle === "double") {
+    const d = 1.5;
+    out.push({
+      closed: true,
+      stroke,
+      points: [[fx0 + d, fy0 + d], [fx1 - d, fy0 + d], [fx1 - d, fy1 - d], [fx0 + d, fy1 - d]],
+    });
+  }
   if (cornerMarks) {
     const o = 2;
     const len = Math.max(1, Math.min(4, insetMm - o - 0.5));

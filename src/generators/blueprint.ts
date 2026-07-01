@@ -10,7 +10,10 @@ import {
   translateLines,
   placeMotif,
   drawFrame,
+  type FrameStyle,
 } from "./layout/kit";
+
+type TextAlign = "left" | "center" | "right";
 
 type Params = {
   header: string;
@@ -20,9 +23,20 @@ type Params = {
   footer: string;
   titleFont: HersheyFontId;
   metaFont: HersheyFontId;
-  /** Cap heights as % of canvas height — typography scales with the paper format. */
+  /** Cap heights as % of canvas height — typography scales with the paper format.
+   *  Each field is independent (header/subtitle/footer no longer derive from meta). */
   titleSize: number;
   metaSize: number;
+  headerSize: number;
+  subtitleSize: number;
+  footerSize: number;
+  /** Per-field visibility. A field renders iff its show flag is on AND its text is non-empty. */
+  headerShow: boolean;
+  subtitleShow: boolean;
+  footerShow: boolean;
+  /** Horizontal alignment of the whole text stack. */
+  textAlign: TextAlign;
+  frameStyle: FrameStyle;
   frameInsetMm: number;
   cornerMarks: boolean;
   motifScale: number;
@@ -40,8 +54,16 @@ const DEFAULTS: Params = {
   footer: "",
   titleFont: "serif",
   metaFont: "simplex",
-  titleSize: 3.8, // ≈8mm on A5 — calibrated against the original mm defaults
-  metaSize: 1.4,  // ≈3mm on A5
+  titleSize: 3.8,    // ≈8mm on A5 — calibrated against the original mm defaults
+  metaSize: 1.4,     // ≈3mm on A5
+  headerSize: 1.4,   // was hard-wired to metaSize
+  subtitleSize: 1.6, // was hard-wired to metaSize × 1.1
+  footerSize: 1.1,   // was hard-wired to metaSize × 0.8
+  headerShow: true,
+  subtitleShow: true,
+  footerShow: true,
+  textAlign: "center",
+  frameStyle: "single",
   frameInsetMm: 8,
   cornerMarks: false,
   motifScale: 0.8,
@@ -73,6 +95,14 @@ export const blueprint: GeneratorDef<Params> = {
     metaFont: { value: DEFAULTS.metaFont, options: FONT_IDS },
     titleSize: { value: DEFAULTS.titleSize, min: 1.5, max: 10, step: 0.1 },
     metaSize: { value: DEFAULTS.metaSize, min: 0.5, max: 4, step: 0.05 },
+    headerSize: { value: DEFAULTS.headerSize, min: 0.5, max: 6, step: 0.05 },
+    subtitleSize: { value: DEFAULTS.subtitleSize, min: 0.5, max: 6, step: 0.05 },
+    footerSize: { value: DEFAULTS.footerSize, min: 0.5, max: 6, step: 0.05 },
+    headerShow: { value: DEFAULTS.headerShow },
+    subtitleShow: { value: DEFAULTS.subtitleShow },
+    footerShow: { value: DEFAULTS.footerShow },
+    textAlign: { value: DEFAULTS.textAlign, options: ["left", "center", "right"] },
+    frameStyle: { value: DEFAULTS.frameStyle, options: ["none", "single", "double"] },
     frameInsetMm: { value: DEFAULTS.frameInsetMm, min: 3, max: 25, step: 0.5 },
     cornerMarks: { value: DEFAULTS.cornerMarks },
     motifScale: { value: DEFAULTS.motifScale, min: 0.3, max: 1, step: 0.05 },
@@ -84,8 +114,9 @@ export const blueprint: GeneratorDef<Params> = {
     const out: Polyline[] = [];
     const accent = (t: "frame" | "meta") => (p.accentTarget === t ? p.accentColor : undefined);
 
-    // Frame + corner marks (frame is always polylines[0] — blueprint-test relies on it).
-    out.push(...drawFrame(canvas, p.frameInsetMm, p.cornerMarks, accent("frame")));
+    // Frame + corner marks. For frameStyle "single"/"double" the frame rect is
+    // polylines[0] (blueprint-test relies on it); "none" emits no frame.
+    out.push(...drawFrame(canvas, p.frameInsetMm, p.cornerMarks, accent("frame"), p.frameStyle));
     const fx0 = p.frameInsetMm;
     const fy0 = p.frameInsetMm;
     const fx1 = canvas.wMm - p.frameInsetMm;
@@ -104,17 +135,21 @@ export const blueprint: GeneratorDef<Params> = {
     // Width-clamping inside block() can only make blocks shorter than linear,
     // so a single pass with the computed s is sufficient to fit the stack.
     // Type sizes are % of canvas height — typography stays proportional across formats.
-    const titleMm = (p.titleSize / 100) * canvas.hMm;
-    const metaMm = (p.metaSize / 100) * canvas.hMm;
+    const titleMm    = (p.titleSize / 100) * canvas.hMm;
+    const metaMm     = (p.metaSize / 100) * canvas.hMm;
+    const headerMm   = (p.headerSize / 100) * canvas.hMm;
+    const subtitleMm = (p.subtitleSize / 100) * canvas.hMm;
+    const footerMm   = (p.footerSize / 100) * canvas.hMm;
     const buildBlocks = (s: number) => {
       const gap = metaMm * 0.9 * s;
       // gap above title scales with title size (visual weight), unlike the meta-driven inter-slot gap
       const titleGap = titleMm * 0.8 * s;
-      const header   = textBlock(p.header.toUpperCase(), p.metaFont, metaMm * s, maxW);
+      // Each field sizes independently; header/subtitle/footer also gate on their show flag.
+      const header   = p.headerShow   ? textBlock(p.header.toUpperCase(), p.metaFont, headerMm * s, maxW) : null;
       const title    = textBlock(p.title.toUpperCase(), p.titleFont, titleMm * s, maxW);
-      const subtitle = textBlock(p.subtitle, p.metaFont, metaMm * 1.1 * s, maxW);
+      const subtitle = p.subtitleShow ? textBlock(p.subtitle, p.metaFont, subtitleMm * s, maxW) : null;
       const meta     = textBlock(p.meta, p.metaFont, metaMm * s, maxW, accent("meta"));
-      const footer   = textBlock(p.footer, p.metaFont, metaMm * 0.8 * s, maxW);
+      const footer   = p.footerShow   ? textBlock(p.footer, p.metaFont, footerMm * s, maxW) : null;
       return { gap, titleGap, header, title, subtitle, meta, footer };
     };
 
@@ -139,10 +174,17 @@ export const blueprint: GeneratorDef<Params> = {
     // Hershey has no case transform.
     const { gap, titleGap, header, title, subtitle, meta, footer } = buildBlocks(s);
 
+    // Blocks are centered on local x=0; align shifts the whole block left/right
+    // within the inner content area [ix0, ix1] (multi-line stays internally centered).
+    const alignX = (bw: number) =>
+      p.textAlign === "left" ? ix0 + bw / 2
+      : p.textAlign === "right" ? ix1 - bw / 2
+      : cx;
+
     // Top-down: header.
     let top = iy0;
     if (header) {
-      out.push(...translateLines(header.lines, cx, top));
+      out.push(...translateLines(header.lines, alignX(header.wMm), top));
       top += header.hMm + gap;
     }
 
@@ -150,22 +192,22 @@ export const blueprint: GeneratorDef<Params> = {
     let bottom = iy1;
     if (footer) {
       bottom -= footer.hMm;
-      out.push(...translateLines(footer.lines, cx, bottom));
+      out.push(...translateLines(footer.lines, alignX(footer.wMm), bottom));
       bottom -= gap;
     }
     if (meta) {
       bottom -= meta.hMm;
-      out.push(...translateLines(meta.lines, cx, bottom));
+      out.push(...translateLines(meta.lines, alignX(meta.wMm), bottom));
       bottom -= gap;
     }
     if (subtitle) {
       bottom -= subtitle.hMm;
-      out.push(...translateLines(subtitle.lines, cx, bottom));
+      out.push(...translateLines(subtitle.lines, alignX(subtitle.wMm), bottom));
       bottom -= gap;
     }
     if (title) {
       bottom -= title.hMm;
-      out.push(...translateLines(title.lines, cx, bottom));
+      out.push(...translateLines(title.lines, alignX(title.wMm), bottom));
       bottom -= titleGap; // breathing room between motif and title
     }
 
