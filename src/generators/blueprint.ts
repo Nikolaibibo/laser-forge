@@ -75,6 +75,10 @@ const DEFAULTS: Params = {
 /** Minimum fraction of inner height reserved for the motif slot. */
 const MIN_SLOT_FRAC = 0.2;
 
+/** Single-stroke text reads cleanly at cap height ≳ 8× the pen width (real plot
+ *  test: 3mm cap at a 1mm pen blobs; ~8mm at 1mm is crisp). Below this we warn. */
+const MIN_CAP_RATIO = 8;
+
 export const blueprint: GeneratorDef<Params> = {
   id: "blueprint",
   name: "Blueprint",
@@ -215,6 +219,31 @@ export const blueprint: GeneratorDef<Params> = {
     const slotH = Math.max(1, bottom - top);
     out.push(...placeMotif({ x: ix0, y: top, w: maxW, h: slotH }, p.motifScale, p.motifRotation));
 
-    return { polylines: out, widthMm: canvas.wMm, heightMm: canvas.hMm };
+    // Pen-width-aware warnings (non-blocking; do not alter geometry).
+    const pen = canvas.penWidthMm ?? 0.3;
+    const minCap = MIN_CAP_RATIO * pen;
+    const warnings: string[] = [];
+    const checkCap = (label: string, capMm: number, block: unknown) => {
+      if (block && capMm < minCap)
+        warnings.push(
+          `${label} cap ${(capMm).toFixed(1)}mm is small for a ${pen}mm pen — recommend ≥${minCap.toFixed(1)}mm`,
+        );
+    };
+    checkCap("Title", titleMm * s, title);
+    checkCap("Meta", metaMm * s, meta);
+    checkCap("Header", headerMm * s, header);
+    checkCap("Subtitle", subtitleMm * s, subtitle);
+    checkCap("Footer", footerMm * s, footer);
+    if (s < 0.999)
+      warnings.push(
+        `Text scaled to ${Math.round(s * 100)}% to fit the frame — enlarge the canvas or reduce sizes.`,
+      );
+
+    return {
+      polylines: out,
+      widthMm: canvas.wMm,
+      heightMm: canvas.hMm,
+      warnings: warnings.length ? warnings : undefined,
+    };
   },
 };

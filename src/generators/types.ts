@@ -26,9 +26,11 @@ export type Artwork = {
   polylines: Polyline[];
   widthMm: number;
   heightMm: number;
+  /** Non-blocking notices surfaced in the UI (e.g. text too small for the pen). */
+  warnings?: string[];
 };
 
-export type Canvas = { wMm: number; hMm: number };
+export type Canvas = { wMm: number; hMm: number; penWidthMm?: number };
 
 export type GeneratorDef<P extends Record<string, unknown> = Record<string, unknown>> = {
   id: string;

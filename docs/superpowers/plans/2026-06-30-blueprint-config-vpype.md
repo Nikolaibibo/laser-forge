@@ -11,7 +11,8 @@
 - ✅ **Task 4** (default-on dedupe/join) — `svgExport`+`gcode` resolve `?? true`; store + AxiDrawPanel UI ON. Commit `84934bd`.
 - ✅ **Task 1** (page formats) — **Deviation:** built as a global Format `<select>` in `TopBar` calling `setCanvas` via `src/util/pageFormats.ts`, NOT a blueprint param. Cleaner (affects all generators; avoids Leva-param-with-side-effect). `pageFormat`/`applyPageFormat` in the plan below are superseded by this.
 - ✅ **Task 2** (per-field typography) — independent `headerSize/subtitleSize/footerSize` + `*Show` toggles + `textAlign` + `frameStyle`. **Deviation:** `textAlign` is block-level in the blueprint caller (via `alignX`), NOT a `textBlock` param — keeps the shared kit stable for specsheet. `drawFrame` gained `frameStyle` (default `"single"`, behaviour-neutral).
-- ⏳ Remaining: Task 3 (pen-guard warnings — note `penWidthMm` already exists in store/TopBar), Task 5 (editable dual-layer text), Task 6 (vpype on Pi bridge), Task 7 (tests).
+- ✅ **Task 3** (pen-guard warnings) — `MIN_CAP_RATIO=8`; blueprint returns `Artwork.warnings` when a shown field's cap < 8× pen, or when the stack was scaled to fit. **Deviation:** pen width flows in via the `Canvas` object (`Canvas.penWidthMm`, App passes store `penWidthMm`), NOT a duplicate blueprint param — the global pen field already exists. Warnings preserved through the distortion pipeline in App and rendered as a `.lf-warnings` overlay.
+- ⏳ Remaining: Task 5 (editable dual-layer text), Task 6 (vpype on Pi bridge), Task 7 (tests).
 
 **Architecture:** Extend `blueprint.ts` schema/`generate` for independent field controls + page format + pen width. Add `src/util/pageFormats.ts`. Carry label/source metadata on `Artwork` (optional) so `svgExport` can emit an editable `<text>` layer + `<metadata>` JSON; add `src/util/blueprintMeta.ts` for round-trip import. Flip `dedupe`/`join` defaults ON. Add an env-gated vpype preprocess in `bridge/bridge.py`.
 
