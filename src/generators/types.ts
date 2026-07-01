@@ -22,12 +22,28 @@ export type Polyline = {
   stroke?: string; // CSS/Hex color; undefined = default pen
 };
 
+/** Editable text label (mirrors a rendered single-stroke block) for the SVG
+ *  export's hidden <text> layer. Positions in mm, anchor per align. */
+export type TextLabel = {
+  field: string;
+  text: string;
+  xMm: number;
+  yMm: number;
+  capMm: number;
+  font: string;
+  align: "left" | "center" | "right";
+};
+
 export type Artwork = {
   polylines: Polyline[];
   widthMm: number;
   heightMm: number;
   /** Non-blocking notices surfaced in the UI (e.g. text too small for the pen). */
   warnings?: string[];
+  /** Editable text mirrors for the export's <text> layer (blueprint/specsheet). */
+  labels?: TextLabel[];
+  /** Round-trip provenance embedded as <metadata> on export. */
+  source?: { generator: string; params: Record<string, unknown> };
 };
 
 export type Canvas = { wMm: number; hMm: number; penWidthMm?: number };

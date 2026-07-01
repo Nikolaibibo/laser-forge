@@ -3,7 +3,7 @@
 // Spec: docs/superpowers/specs/2026-06-04-blueprint-layout-module-design.md
 // Reads the imported motif from the app store (only impurity — same motif +
 // same params → identical output; seed is unused, the layout has no randomness).
-import type { GeneratorDef, Polyline } from "./types";
+import type { GeneratorDef, Polyline, TextLabel } from "./types";
 import { FONT_IDS, type HersheyFontId } from "./text";
 import {
   textBlock,
@@ -184,11 +184,17 @@ export const blueprint: GeneratorDef<Params> = {
       p.textAlign === "left" ? ix0 + bw / 2
       : p.textAlign === "right" ? ix1 - bw / 2
       : cx;
+    // Anchor for the editable <text> mirror (SVG text-anchor: start/middle/end).
+    const anchorX = p.textAlign === "left" ? ix0 : p.textAlign === "right" ? ix1 : cx;
+    const labels: TextLabel[] = [];
+    const label = (field: string, text: string, topMm: number, capMm: number, font: string) =>
+      labels.push({ field, text, xMm: anchorX, yMm: topMm + capMm, capMm, font, align: p.textAlign });
 
     // Top-down: header.
     let top = iy0;
     if (header) {
       out.push(...translateLines(header.lines, alignX(header.wMm), top));
+      label("header", p.header.toUpperCase(), top, headerMm * s, p.metaFont);
       top += header.hMm + gap;
     }
 
@@ -197,21 +203,25 @@ export const blueprint: GeneratorDef<Params> = {
     if (footer) {
       bottom -= footer.hMm;
       out.push(...translateLines(footer.lines, alignX(footer.wMm), bottom));
+      label("footer", p.footer, bottom, footerMm * s, p.metaFont);
       bottom -= gap;
     }
     if (meta) {
       bottom -= meta.hMm;
       out.push(...translateLines(meta.lines, alignX(meta.wMm), bottom));
+      label("meta", p.meta, bottom, metaMm * s, p.metaFont);
       bottom -= gap;
     }
     if (subtitle) {
       bottom -= subtitle.hMm;
       out.push(...translateLines(subtitle.lines, alignX(subtitle.wMm), bottom));
+      label("subtitle", p.subtitle, bottom, subtitleMm * s, p.metaFont);
       bottom -= gap;
     }
     if (title) {
       bottom -= title.hMm;
       out.push(...translateLines(title.lines, alignX(title.wMm), bottom));
+      label("title", p.title.toUpperCase(), bottom, titleMm * s, p.titleFont);
       bottom -= titleGap; // breathing room between motif and title
     }
 
@@ -244,6 +254,8 @@ export const blueprint: GeneratorDef<Params> = {
       widthMm: canvas.wMm,
       heightMm: canvas.hMm,
       warnings: warnings.length ? warnings : undefined,
+      labels,
+      source: { generator: "blueprint", params: { ...p } },
     };
   },
 };

@@ -94,7 +94,8 @@ export function AxiDrawPanel() {
 
   const doPlot = async () => {
     if (!artwork) return;
-    const svg = svgExport(artwork, { dedupe, join, strokeWidthMm: penWidthMm });
+    // Plot path stays flat (no editable <text> layer) — axicli only needs paths.
+    const svg = svgExport(artwork, { dedupe, join, strokeWidthMm: penWidthMm, editableText: false });
     setPlotting(true);
     setBusy(true);
     setMsg("Plotting… (press Stop to abort)");
@@ -144,7 +145,7 @@ export function AxiDrawPanel() {
         setMsg(`Plotting ${gi + 1}/${groups.length} (${grp.stroke})… (Stop to abort)`);
         const svg = svgExport(
           { ...artwork, polylines: grp.polylines },
-          { dedupe, join, strokeWidthMm: penWidthMm },
+          { dedupe, join, strokeWidthMm: penWidthMm, editableText: false },
         );
         const r = await b.plot(svg, profile, speed, accel, delayDown, delayUp);
         if (!r.ok) {

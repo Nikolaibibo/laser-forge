@@ -7,6 +7,7 @@ import { distortionById } from "../distortions/registry";
 import { schemaDefaults } from "./controls/schema";
 import { SchemaControls } from "./controls/SchemaControls";
 import { parseSvgMotif } from "../util/svgImport";
+import { parseMeta } from "../util/blueprintMeta";
 import { fileToLuminance } from "../util/imageLoad";
 
 /** Generators that read the imported motif from the store. */
@@ -19,6 +20,7 @@ export function Inspector() {
   const generatorId = useApp((s) => s.generatorId);
   const genParams = useApp((s) => s.genParams);
   const setGenParams = useApp((s) => s.setGenParams);
+  const setGenerator = useApp((s) => s.setGenerator);
   const layers = useApp((s) => s.layers);
   const layerParams = useApp((s) => s.layerParams);
   const setLayerParams = useApp((s) => s.setLayerParams);
@@ -59,6 +61,16 @@ export function Inspector() {
       if (!f) return;
       f.text()
         .then((src) => {
+          // Round-trip: an SVG we exported carries lf-blueprint metadata → restore
+          // the generator + params instead of loading the composition as a motif.
+          // (The motif itself isn't stored — re-upload it if needed.)
+          const meta = parseMeta(src);
+          if (meta && byId(meta.generator)) {
+            setGenParams(meta.generator, meta.params);
+            setGenerator(meta.generator);
+            setMotifError(null);
+            return;
+          }
           try {
             setMotif({ name: f.name, ...parseSvgMotif(src) });
             setMotifError(null);
