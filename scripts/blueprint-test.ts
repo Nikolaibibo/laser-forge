@@ -8,6 +8,8 @@ import { blueprint } from "../src/generators/blueprint";
 import { parseSvgMotif } from "../src/util/svgImport";
 import { useApp } from "../src/state/store";
 import { svgExport } from "../src/render/svgExport";
+import { parseMeta } from "../src/util/blueprintMeta";
+import { PAGE_FORMATS, pageFormatSize, detectPageFormat } from "../src/util/pageFormats";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const canvas = { wMm: 148, hMm: 210 }; // A5 portrait
@@ -123,6 +125,78 @@ useApp.getState().setMotif(null);
   for (const l of r90.polylines) for (const [x, y] of l.points) {
     assert.ok(x >= 0 && x <= 148 && y >= 0 && y <= 210);
   }
+}
+
+// 12. independent per-field sizing: headerSize scales the header cap height alone
+{
+  useApp.getState().setMotif(null);
+  const iso = { ...P, title: "", meta: "", subtitleShow: false, footerShow: false, frameStyle: "none" as const, motifScale: 0 };
+  // real (non-degenerate) polylines only — drops the motifScale:0 placeholder point
+  const capH = (sz: number) => {
+    const ys = blueprint.generate({ ...iso, header: "SPEC", headerSize: sz }, 1, canvas)
+      .polylines.filter((l) => l.points.some((p) => p[0] !== l.points[0][0] || p[1] !== l.points[0][1]))
+      .flatMap((l) => l.points.map((p) => p[1]));
+    return Math.max(...ys) - Math.min(...ys);
+  };
+  assert.ok(capH(5) > capH(1) * 2, `headerSize should scale independently: ${capH(5)} vs ${capH(1)}`);
+}
+// 13. per-field show toggle collapses that field
+{
+  const iso = { ...P, title: "", meta: "", frameStyle: "none" as const, motifScale: 0, header: "SPEC" };
+  const on = blueprint.generate({ ...iso, headerShow: true }, 1, canvas).polylines.length;
+  const off = blueprint.generate({ ...iso, headerShow: false }, 1, canvas).polylines.length;
+  assert.ok(on > off, "headerShow=false should collapse the header");
+}
+// 14. textAlign shifts the whole block horizontally
+{
+  const iso = { ...P, title: "", meta: "", frameStyle: "none" as const, motifScale: 0, header: "A" };
+  const minX = (a: "left" | "right") =>
+    Math.min(...blueprint.generate({ ...iso, textAlign: a }, 1, canvas).polylines.flatMap((l) => l.points.map((p) => p[0])));
+  assert.ok(minX("left") < minX("right") - 5, "left align should sit further left than right");
+}
+// 15. frameStyle: none has no frame rect, double adds an inner rect
+{
+  const rects = (fs: "none" | "single" | "double") =>
+    blueprint.generate({ ...P, frameStyle: fs }, 1, canvas).polylines.filter((l) => l.closed && l.points.length === 4).length;
+  assert.equal(rects("none"), rects("single") - 1, "none = single - 1 rect");
+  assert.equal(rects("double"), rects("single") + 1, "double = single + 1 rect");
+}
+// 16. pen-width guard: small cap warns at a fat pen, clean at a thin one; geometry unchanged
+{
+  useApp.getState().setMotif(null);
+  const warns = (pen: number) =>
+    blueprint.generate({ ...P, meta: "" }, 1, { wMm: 148, hMm: 210, penWidthMm: pen }).warnings ?? [];
+  // titleSize 3.8% of 210 = 7.98mm: at a 1mm pen (min 8mm) it warns; at 0.3mm (min 2.4mm) it doesn't.
+  assert.ok(warns(1.0).some((w) => w.startsWith("Title")), "fat pen should warn on a small title");
+  assert.ok(!warns(0.3).some((w) => w.startsWith("Title")), "thin pen should not warn on the title");
+  const g = (pen: number) => blueprint.generate({ ...P, meta: "" }, 1, { wMm: 148, hMm: 210, penWidthMm: pen }).polylines.length;
+  assert.equal(g(1.0), g(0.3), "pen width must not change geometry (warnings are side-info)");
+}
+// 17. editable dual-layer export + metadata round-trip
+{
+  const params = { ...P, header: "SPEC", meta: "A · B & <C>" };
+  const art = blueprint.generate(params, 1, canvas);
+  const ed = svgExport(art); // editableText defaults true
+  const flat = svgExport(art, { editableText: false });
+  const n = (s: string, re: RegExp) => (s.match(re) || []).length;
+  assert.ok(ed.includes('<metadata id="lf-blueprint">') && ed.includes('inkscape:label="text"'), "editable export has metadata + text layer");
+  assert.equal(n(ed, /<text /g), art.labels!.length, "one <text> per shown label");
+  assert.equal(n(ed, /<path /g), n(flat, /<path /g), "the text layer adds no plot paths");
+  assert.ok(ed.includes("A · B &amp; &lt;C&gt;"), "text content is XML-escaped");
+  assert.ok(!flat.includes("<text") && !flat.includes("<metadata"), "flat export is plain");
+  const rt = parseMeta(ed);
+  assert.ok(rt && rt.generator === "blueprint", "round-trip finds the source");
+  assert.deepEqual(rt!.params, params, "round-trip params deep-equal the originals");
+  assert.equal(parseMeta(flat), null, "flat export has no metadata to parse");
+}
+// 18. page-format presets
+{
+  assert.deepEqual(pageFormatSize("a4-landscape"), { wMm: 297, hMm: 210 });
+  assert.deepEqual(pageFormatSize("a4-portrait"), { wMm: 210, hMm: 297 });
+  assert.equal(pageFormatSize("custom"), null);
+  assert.equal(detectPageFormat(297, 210), "a4-landscape");
+  assert.equal(detectPageFormat(200, 200), "custom");
+  assert.equal(PAGE_FORMATS.length, 8);
 }
 
 console.log("blueprint: all checks passed ✓");
