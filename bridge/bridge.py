@@ -62,6 +62,11 @@ STATIC_DIR = os.environ.get(
 PORT_PREF = os.environ.get("AXIDRAW_PORT", "/dev/cu.usbmodem11101")
 SCALE = 1.25  # 16T vs 20T pulley correction (= 20/16)
 
+# Optional vpype pre-pass (linemerge/linesort/linesimplify) before plotting.
+# Env-gated so it's opt-in and never a hard dependency. See maybe_vpype().
+VPYPE_ENABLED = os.environ.get("LF_VPYPE", "").strip().lower() in ("1", "true", "yes", "on")
+VPYPE_BIN = os.environ.get("LF_VPYPE_BIN", os.path.expanduser("~/.venvs/vpype/bin/vpype"))
+
 
 def resolve_port() -> str:
     if os.path.exists(PORT_PREF):
@@ -202,6 +207,60 @@ def prep_svg(raw: str, scale: float = SCALE) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Optional vpype pre-pass. Merges coincident/overlapping lines (no double-draw),
+# sorts to minimise pen-up travel, simplifies. Flattens transforms/curves too;
+# prep_svg already copes with vpype's output units. Failure never blocks a plot.
+# ---------------------------------------------------------------------------
+def maybe_vpype(raw_svg: str) -> str:
+    if not VPYPE_ENABLED:
+        return raw_svg
+    if not os.path.exists(VPYPE_BIN):
+        print(f"[vpype] LF_VPYPE set but binary missing at {VPYPE_BIN}; using raw",
+              file=sys.stderr)
+        return raw_svg
+    fin = fout = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".svg", prefix="lf_vp_in_", delete=False
+        ) as f:
+            f.write(raw_svg)
+            fin = f.name
+        fout = fin.replace("lf_vp_in_", "lf_vp_out_")
+        # macOS dev needs GEOS on DYLD path; harmless/ignored on the Pi (Linux).
+        env = {**os.environ,
+               "DYLD_LIBRARY_PATH": "/opt/homebrew/lib:" + os.environ.get("DYLD_LIBRARY_PATH", "")}
+        r = subprocess.run(
+            [VPYPE_BIN, "read", fin,
+             "linemerge", "--tolerance", "0.1mm",
+             "linesort",
+             "linesimplify", "--tolerance", "0.05mm",
+             "write", fout],
+            capture_output=True, text=True, timeout=60, env=env,
+        )
+        if r.returncode != 0 or not os.path.exists(fout):
+            print(f"[vpype] failed (rc={r.returncode}): {(r.stderr or '').strip()[:200]}; using raw",
+                  file=sys.stderr)
+            return raw_svg
+        with open(fout) as f:
+            cleaned = f.read()
+        # vpype writes <polyline>/<line>, not <path>; count all geometry elements.
+        def geo(s: str) -> int:
+            return s.count("<path") + s.count("<polyline") + s.count("<line")
+        print(f"[vpype] geometry {geo(raw_svg)} -> {geo(cleaned)}", file=sys.stderr)
+        return cleaned
+    except Exception as e:  # noqa: BLE001 — any failure falls back to the raw SVG
+        print(f"[vpype] error: {e}; using raw", file=sys.stderr)
+        return raw_svg
+    finally:
+        for p in (fin, fout):
+            if p and os.path.exists(p):
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass
+
+
+# ---------------------------------------------------------------------------
 # Process / port management. One motion op at a time (LOCK); /stop bypasses it.
 # ---------------------------------------------------------------------------
 LOCK = threading.Lock()
@@ -288,7 +347,7 @@ def plot_svg(
     the pen held up (dry outline). speed/accel/delay_* override profile defaults."""
     global PLOT_PROC
     pen = pen_flags(profile, dry, speed, accel, delay_down, delay_up)
-    prepped = prep_svg(raw_svg)
+    prepped = prep_svg(maybe_vpype(raw_svg))
     tmp = tempfile.NamedTemporaryFile(
         mode="w", suffix=".svg", prefix="laserforge_", delete=False
     )
