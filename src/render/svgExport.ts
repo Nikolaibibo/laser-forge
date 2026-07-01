@@ -8,9 +8,9 @@ const round = (n: number, digits = 3): string => {
 };
 
 export type SvgExportOptions = {
-  /** Remove duplicate and overlapping collinear path segments before serializing. */
+  /** Remove duplicate and overlapping collinear path segments before serializing. Default true. */
   dedupe?: boolean;
-  /** Join open polylines whose endpoints coincide into longer continuous paths. */
+  /** Join open polylines whose endpoints coincide into longer continuous paths. Default true. */
   join?: boolean;
   /** Stroke width in mm (cosmetic for plotting — the plotter only follows paths). */
   strokeWidthMm?: number;
@@ -24,8 +24,12 @@ export type SvgExportOptions = {
  */
 export const svgExport = (art: Artwork, opts: SvgExportOptions = {}): string => {
   const { widthMm, heightMm } = art;
-  let lines = opts.dedupe ? dedupePaths(art.polylines) : art.polylines;
-  if (opts.join) lines = mergePaths(lines);
+  // Dedupe + join default ON: plotter/laser output should never redraw overlapping
+  // lines. Callers pass explicit false to opt out (regression escape hatch).
+  const dedupe = opts.dedupe ?? true;
+  const join = opts.join ?? true;
+  let lines = dedupe ? dedupePaths(art.polylines) : art.polylines;
+  if (join) lines = mergePaths(lines);
   const paths = lines
     .filter((l) => l.points.length >= 2)
     .map((l) => {

@@ -47,7 +47,7 @@ export function AxiDrawPanel() {
   const [delayDown, setDelayDown] = useState(PROFILE_DELAYS.pencil[0]);
   const [delayUp, setDelayUp] = useState(PROFILE_DELAYS.pencil[1]);
   const [join, setJoin] = useState(true);
-  const [dedupe, setDedupe] = useState(false);
+  const [dedupe, setDedupe] = useState(true);
 
   // Reseed the delay sliders to the chosen profile's tuned defaults whenever the
   // profile changes — keeps each pen's sane baseline, still tweakable from there.

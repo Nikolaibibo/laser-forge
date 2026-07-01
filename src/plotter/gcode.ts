@@ -152,9 +152,9 @@ export function artworkToGcode(art: Artwork, opts: PenOpts = DEFAULT_PEN): strin
 }
 
 export type GcodeExportOptions = {
-  /** Remove duplicate/overlapping segments so the pen doesn't redraw them. */
+  /** Remove duplicate/overlapping segments so the pen doesn't redraw them. Default true. */
   dedupe?: boolean;
-  /** Join open polylines whose endpoints coincide → fewer pen lifts. */
+  /** Join open polylines whose endpoints coincide → fewer pen lifts. Default true. */
   join?: boolean;
   /** Pen/feed options. Defaults to DEFAULT_PEN (M3 S20 up / M3 S160 down). */
   pen?: PenOpts;
@@ -166,8 +166,11 @@ export type GcodeExportOptions = {
  * matches what gets streamed via Web Serial.
  */
 export function gcodeExport(art: Artwork, opts: GcodeExportOptions = {}): string {
-  let polylines = opts.dedupe ? dedupePaths(art.polylines) : art.polylines;
-  if (opts.join) polylines = mergePaths(polylines);
+  // Dedupe + join default ON — mirrors svgExport so streamed/downloaded output matches.
+  const dedupe = opts.dedupe ?? true;
+  const join = opts.join ?? true;
+  let polylines = dedupe ? dedupePaths(art.polylines) : art.polylines;
+  if (join) polylines = mergePaths(polylines);
   const lines = artworkToGcode({ ...art, polylines }, opts.pen ?? DEFAULT_PEN);
   return lines.join("\n") + "\n";
 }
