@@ -3,6 +3,7 @@ import { harmonograph } from "./harmonograph";
 import { flowField } from "./flowField";
 import { voronoi } from "./voronoi";
 import { voronoiMoire } from "./voronoiMoire";
+import { gratingMoire } from "./gratingMoire";
 import { contours } from "./contours";
 import { spaceFilling } from "./spaceFilling";
 import { stringArt } from "./stringArt";
@@ -44,6 +45,7 @@ export const GENERATOR_GROUPS: { title: string; items: GeneratorDef<any>[] }[] =
       attractor,
       voronoi,
       voronoiMoire,
+      gratingMoire,
       contours,
       stringArt,
       tspArt,
