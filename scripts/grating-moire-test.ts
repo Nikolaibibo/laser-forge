@@ -12,7 +12,7 @@ const P = { ...gratingMoire.defaults };
   assert(art.polylines.length > 0, "produces grating lines");
 }
 
-// 2. Two pen colours present; every line is a 2-point open segment.
+// 2. Two pen colours present; every line is an open polyline of ≥2 points.
 {
   const art = gratingMoire.generate(P, 7, canvas);
   const colors = new Set(art.polylines.map((l) => l.stroke));
@@ -20,8 +20,8 @@ const P = { ...gratingMoire.defaults };
   assert(colors.has(P.colorB), "grating B colour present");
   assert.equal(colors.size, 2, "exactly two pen colours");
   for (const l of art.polylines) {
-    assert.equal(l.points.length, 2, "grating line = 2 points");
-    assert.equal(l.closed, false, "grating line is open");
+    assert(l.points.length >= 2, "line has ≥2 points");
+    assert.equal(l.closed, false, "line is open");
   }
 }
 
@@ -33,22 +33,18 @@ const P = { ...gratingMoire.defaults };
   assert(firstB > lastA, "all A lines come before all B lines");
 }
 
-// 4. All endpoints stay inside the margin rectangle (clipped to page − margin).
+// 4. All endpoints stay on the page (panels + warp are clamped to bounds).
 {
   const art = gratingMoire.generate(P, 7, canvas);
-  const lo = P.marginMm - 0.01;
-  const hiX = canvas.wMm - P.marginMm + 0.01;
-  const hiY = canvas.hMm - P.marginMm + 0.01;
   for (const l of art.polylines) {
     for (const [x, y] of l.points) {
-      assert(x >= lo && x <= hiX, `x within margin rect: ${x}`);
-      assert(y >= lo && y <= hiY, `y within margin rect: ${y}`);
+      assert(x >= -0.01 && x <= canvas.wMm + 0.01, `x on page: ${x}`);
+      assert(y >= -0.01 && y <= canvas.hMm + 0.01, `y on page: ${y}`);
     }
   }
 }
 
-// 5. Determinism: same seed → identical output (generator is seed-independent
-//    but must stay reproducible).
+// 5. Determinism: same seed → identical output.
 {
   const a = gratingMoire.generate(P, 42, canvas);
   const b = gratingMoire.generate(P, 42, canvas);
@@ -65,38 +61,36 @@ const P = { ...gratingMoire.defaults };
   );
 }
 
-// 7. The two gratings differ: with a nonzero angle offset, A and B lines are
-//    not identical geometry (a real moiré, not one grating drawn twice).
+// 7. Panel offset splits the two colours into different x-extents (real offset,
+//    not one grating drawn twice in place).
 {
-  const art = gratingMoire.generate(P, 7, canvas);
-  const a = art.polylines.find((l) => l.stroke === P.colorA)!;
-  const bLines = art.polylines.filter((l) => l.stroke === P.colorB);
-  const identical = bLines.some(
-    (b) =>
-      Math.hypot(b.points[0][0] - a.points[0][0], b.points[0][1] - a.points[0][1]) < 1e-6 &&
-      Math.hypot(b.points[1][0] - a.points[1][0], b.points[1][1] - a.points[1][1]) < 1e-6,
+  const art = gratingMoire.generate({ ...P, offsetXMm: 40, offsetYMm: 0 }, 7, canvas);
+  const minX = (c: string) =>
+    Math.min(...art.polylines.filter((l) => l.stroke === c).flatMap((l) => l.points.map((pt) => pt[0])));
+  assert(Math.abs(minX(P.colorA) - minX(P.colorB)) > 10, "panels are horizontally offset");
+}
+
+// 8. waveAmp = 0 → straight 2-point lines; waveAmp > 0 → sampled multi-point curves.
+{
+  const straight = gratingMoire.generate({ ...P, waveAmpMm: 0 }, 7, canvas);
+  assert(
+    straight.polylines.every((l) => l.points.length === 2),
+    "zero wave → straight 2-point lines",
   );
-  assert(!identical, "rotated grating B is geometrically distinct from A");
+  const wavy = gratingMoire.generate({ ...P, waveAmpMm: 4 }, 7, canvas);
+  assert(wavy.polylines.some((l) => l.points.length > 2), "wave → sampled curves");
 }
 
-// 8. angleOffset = 0 is still valid (parallel gratings — degenerate moiré, no crash).
+// 9. angleOffset = 0 + pitchRatio = 1 (perfectly aligned) still valid, no crash.
 {
-  const art = gratingMoire.generate({ ...P, angleOffsetDeg: 0 }, 7, canvas);
-  assert(art.polylines.length > 0, "zero offset produces output");
+  const art = gratingMoire.generate({ ...P, angleOffsetDeg: 0, pitchRatio: 1 }, 7, canvas);
+  assert(art.polylines.length > 0, "aligned gratings produce output");
 }
 
-// 9. pitchRatio ≠ 1 (pure magnification moiré at zero angle) still produces both layers.
-{
-  const art = gratingMoire.generate({ ...P, angleOffsetDeg: 0, pitchRatio: 1.1 }, 7, canvas);
-  const colors = new Set(art.polylines.map((l) => l.stroke));
-  assert.equal(colors.size, 2, "magnification moiré keeps both pens");
-}
-
-// 10. A steep grating angle (near 90°) still fills the page (normal/projection is
-//     handled for all orientations, no empty output at the axis extreme).
+// 10. A steep grating angle (near 90°) still fills its panel.
 {
   const art = gratingMoire.generate({ ...P, angleBaseDeg: 90 }, 7, canvas);
-  assert(art.polylines.length > 0, "vertical grating fills the page");
+  assert(art.polylines.length > 0, "vertical grating fills the panel");
 }
 
 console.log("grating-moire: all checks passed ✓");
