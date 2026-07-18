@@ -69,16 +69,15 @@ export function PlotterPanel() {
       for (let gi = 0; gi < groups.length; gi++) {
         const grp = groups[gi];
         if (abortRef.current.signal.aborted) break;
-        if (gi > 0) {
-          // pen swap: lift + park, then wait for confirmation. Origin is preserved (no re-home).
-          await g().park();
-          const cont = window.confirm(
-            `Stift ${gi + 1}/${groups.length} einsetzen: ${grp.stroke}\n\nOK = weiter plotten · Abbrechen = stoppen.`,
-          );
-          if (!cont) {
-            abortRef.current.abort();
-            break;
-          }
+        // Confirm the pen for EVERY group, incl. the first — so you always know which
+        // colour is about to plot. For swaps (gi>0) lift + park first; origin is preserved.
+        if (gi > 0) await g().park();
+        const cont = window.confirm(
+          `Stift ${gi + 1}/${groups.length} einsetzen: ${grp.stroke}\n\nOK = plotten · Abbrechen = stoppen.`,
+        );
+        if (!cont) {
+          abortRef.current.abort();
+          break;
         }
         const polys = joinPaths ? mergePaths(grp.polylines) : grp.polylines;
         const lines = artworkToGcode({ ...artwork, polylines: polys }, { ...DEFAULT_PEN, feed });
@@ -212,6 +211,30 @@ export function PlotterPanel() {
               Join paths
             </label>
           </div>
+          {artwork && (() => {
+            // Show the exact pen sequence "Plot by color" will use, so you know which
+            // colour plots first before committing. Only meaningful for multi-pen artwork.
+            const groups = splitByStroke(artwork.polylines);
+            if (groups.length < 2) return null;
+            return (
+              <div style={{ ...row, flexWrap: "wrap", fontSize: 12 }}>
+                <span style={{ opacity: 0.7 }}>Pen-Reihenfolge:</span>
+                {groups.map((grp, i) => (
+                  <span key={grp.stroke} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    {i + 1}.
+                    <span
+                      title={grp.stroke}
+                      style={{
+                        width: 12, height: 12, borderRadius: 2, display: "inline-block",
+                        background: grp.stroke, border: "1px solid var(--line)",
+                      }}
+                    />
+                    <span style={{ opacity: 0.6 }}>({grp.polylines.length})</span>
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
           {progress && (
             <div>
               Plotting… {progress.done}/{progress.total} (

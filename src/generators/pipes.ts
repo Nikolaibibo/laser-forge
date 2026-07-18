@@ -24,6 +24,9 @@ type Params = {
   colorCount: number;     // 1..6 — how many of the color slots below form the palette
   color1: string; color2: string; color3: string;
   color4: string; color5: string; color6: string;
+  laneColorMode: "band" | "outlineFill"; // band = whole pipe one colour; outlineFill = outline pen + accent interior
+  outlineColor: string;   // stroke of the outline lanes (outlineFill mode)
+  outlineLanes: number;   // how many outermost lanes on each side form the outline
   occlusion: boolean;     // pipes pass over/under each other (z-order gaps)
   occlusionGapMm: number; // clear gap carved beside the band that passes over
   arcSamples: number;
@@ -38,6 +41,7 @@ const DEFAULTS: Params = {
   colorCount: 3,
   color1: "#e0584f", color2: "#4f86e0", color3: "#5fcaa8",
   color4: "#e8a33d", color5: "#8d5fc9", color6: "#e96a3a",
+  laneColorMode: "band", outlineColor: "#1a1a1a", outlineLanes: 1,
   occlusion: true, occlusionGapMm: 1.0,
   arcSamples: 14, marginMm: 15,
 };
@@ -171,7 +175,7 @@ export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",
   description:
-    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors); the accent palette itself is colorCount + color1…color6. crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Band width per pipe is seeded from [lanesMin, lanesMax]; endCaps closes band ends with nested semicircular caps. Reseed reshuffles field + z-order.",
+    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors); the accent palette itself is colorCount + color1…color6. crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Band width per pipe is seeded from [lanesMin, lanesMax]; endCaps closes band ends with nested semicircular caps. laneColorMode 'outlineFill' draws the outermost outlineLanes in outlineColor (the black pipe outline) and fills the interior lanes with the pipe's accent colour — a two-pen plot (outline pen first, then accents). Reseed reshuffles field + z-order.",
   defaults: DEFAULTS,
   schema: {
     model: { value: DEFAULTS.model, options: ["wang", "classic"] },
@@ -194,6 +198,9 @@ export const pipes: GeneratorDef<Params> = {
     color4: { value: DEFAULTS.color4, render: (get) => get("Truchet Pipes.colorCount") >= 4 },
     color5: { value: DEFAULTS.color5, render: (get) => get("Truchet Pipes.colorCount") >= 5 },
     color6: { value: DEFAULTS.color6, render: (get) => get("Truchet Pipes.colorCount") >= 6 },
+    laneColorMode: { value: DEFAULTS.laneColorMode, options: ["band", "outlineFill"] },
+    outlineColor: { value: DEFAULTS.outlineColor, render: (get) => get("Truchet Pipes.laneColorMode") === "outlineFill" },
+    outlineLanes: { value: DEFAULTS.outlineLanes, min: 1, max: 4, step: 1, render: (get) => get("Truchet Pipes.laneColorMode") === "outlineFill" },
     occlusion: { value: DEFAULTS.occlusion },
     occlusionGapMm: { value: DEFAULTS.occlusionGapMm, min: 0.2, max: 4, step: 0.1 },
     arcSamples: { value: DEFAULTS.arcSamples, min: 4, max: 32, step: 1 },
@@ -221,7 +228,10 @@ export const pipes: GeneratorDef<Params> = {
 
     // One entry per pipe: centerline + offset band, length for colorStrategy.
     // Lane count per pipe is seeded from [lanesMin, lanesMax] (variable band width).
-    type Comp = { center: Point[]; lanes: Polyline[]; lengthMm: number; bandHalfMm: number; stroke?: string };
+    type Comp = {
+      center: Point[]; lanes: Polyline[]; lengthMm: number; bandHalfMm: number;
+      fused: boolean; stroke?: string; laneStrokes?: (string | undefined)[];
+    };
     const comps: Comp[] = components.map((comp) => {
       const k = lanesLo === lanesHi ? lanesLo : randInt(rng, lanesLo, lanesHi);
       const center = comp.closed ? [...comp.points, comp.points[0]] : comp.points;
@@ -231,7 +241,10 @@ export const pipes: GeneratorDef<Params> = {
         endCaps: p.endCaps,
         capSamples: p.arcSamples,
       });
-      return { center, lanes, lengthMm: polylineLength(center), bandHalfMm: ((k - 1) * p.laneSpacingMm) / 2 };
+      // With endCaps on an open pipe, offsetBand fuses symmetric lane pairs into rings,
+      // so lanes[0] is the OUTERMOST ring (both edges) and index grows inward.
+      const fused = p.endCaps && !comp.closed && center.length >= 2;
+      return { center, lanes, lengthMm: polylineLength(center), bandHalfMm: ((k - 1) * p.laneSpacingMm) / 2, fused };
     });
 
     if (p.colorStrategy === "largestFirst") {
@@ -248,7 +261,29 @@ export const pipes: GeneratorDef<Params> = {
       }
     }
 
-    const laneOf = (c: Comp, l: Polyline): Polyline => (c.stroke ? { ...l, stroke: c.stroke } : l);
+    // Per-lane stroke. "band" = the whole pipe carries its accent (or undefined → black).
+    // "outlineFill" = the outermost `outlineLanes` on each side get outlineColor, the interior
+    // lanes get the pipe's accent (uncoloured pipes fall back to outlineColor, i.e. all-black).
+    for (const c of comps) {
+      if (p.laneColorMode === "band") {
+        c.laneStrokes = c.lanes.map(() => c.stroke);
+        continue;
+      }
+      const n = c.lanes.length;
+      const nOut = Math.max(1, Math.min(Math.floor(p.outlineLanes), Math.max(1, Math.floor(n / 2))));
+      const interior = c.stroke ?? p.outlineColor;
+      c.laneStrokes = c.lanes.map((_, i) => {
+        // fused: index 0 = outer ring, grows inward → only a low-index test is an edge.
+        // unfused: lanes run edge→edge, so both the first and last nOut are edges.
+        const edge = c.fused ? i < nOut : (i < nOut || i >= n - nOut);
+        return edge ? p.outlineColor : interior;
+      });
+    }
+
+    const laneOf = (c: Comp, i: number, l: Polyline): Polyline => {
+      const s = c.laneStrokes?.[i];
+      return s ? { ...l, stroke: s } : l;
+    };
 
     let all: Polyline[];
     if (p.occlusion) {
@@ -256,12 +291,12 @@ export const pipes: GeneratorDef<Params> = {
       const items: OcclItem[] = comps.map((c) => ({
         z: rng(),
         centerline: c.center,
-        lanes: c.lanes.map((l) => laneOf(c, l)),
+        lanes: c.lanes.map((l, i) => laneOf(c, i, l)),
         bandHalfMm: c.bandHalfMm,
       }));
       all = occlude(items, { gapMm: p.occlusionGapMm, bandHalfMm: bandHalfMax });
     } else {
-      all = comps.flatMap((c) => c.lanes.map((l) => laneOf(c, l)));
+      all = comps.flatMap((c) => c.lanes.map((l, i) => laneOf(c, i, l)));
     }
 
     const fitted = fitToCanvas(all, canvas.wMm, canvas.hMm, p.marginMm);
