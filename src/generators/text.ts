@@ -7,6 +7,7 @@ import { TIMESRB } from "./hersheyTimesrb";
 import { TIMESI } from "./hersheyTimesi";
 import type { HersheyGlyph } from "./hersheyFutural";
 import { offsetBand } from "../util/offset";
+import { hatchPolygon } from "../util/hatch";
 import { fitToCanvas, polylineLength } from "../util/path";
 import { makeRng, randInt } from "../util/random";
 import { occlude } from "../util/occlusion";
@@ -160,6 +161,13 @@ type Params = {
   occlusionGap: number;   // clear gap (font units) letters carve into connectors (joinStrokes)
   cornerSmooth: number;   // Chaikin iterations on the centerline (rounds miters)
   endCaps: boolean;       // close band ends with nested semicircular caps
+  fill: "bands" | "hatch"; // bands = K parallel lanes; hatch = fat-stroke outline + hatch fill
+  hatchAngleDeg: number;  // hatch direction (hatch fill)
+  hatchSpacingMm: number; // hatch line spacing — tone lever (tighter = darker)
+  hatchLayers: number;    // 1..3 cross-hatch layers at hatchAngleStepDeg offsets
+  hatchAngleStepDeg: number; // angle offset between cross-hatch layers
+  hatchOutline: boolean;  // also draw the fat-stroke boundary (crisp letter outline)
+  hatchInsetMm: number;   // pull the hatch fill in from the boundary
   rotationDeg: number;    // rotates the whole text block (90 = vertical for portrait)
   colorBy: "none" | "letter" | "word" | "line";
   colorCount: number;     // 1..6 — how many of the color slots below form the palette
@@ -173,6 +181,9 @@ const DEFAULTS: Params = {
   font: "simplex",
   lanesMin: 6, lanesMax: 6, laneSpacingMm: 0.9, letterSpacing: 2, lineSpacing: 1.5,
   joinStrokes: false, occlusionGap: 1.5, cornerSmooth: 2, endCaps: true,
+  fill: "bands",
+  hatchAngleDeg: 45, hatchSpacingMm: 0.8, hatchLayers: 1, hatchAngleStepDeg: 90,
+  hatchOutline: true, hatchInsetMm: 0,
   rotationDeg: 0,
   colorBy: "letter",
   colorCount: 3,
@@ -185,7 +196,7 @@ export const text: GeneratorDef<Params> = {
   id: "text",
   name: "Text Ribbons",
   description:
-    "Single-stroke Hershey lettering (Simplex or Cursive) rendered as dense offset bands — each glyph stroke becomes a K-lane ribbon with capped ends; band width per letter is seeded from [lanesMin, lanesMax]. colorBy cycles the palette per letter/word/line. joinStrokes turns the text into one flowing ribbon: connector bands swing between strokes and the letters carve over/under gaps into them (occlusionGap). Layout is centered per line; fit fills the page.",
+    "Single-stroke Hershey lettering (Simplex or Cursive) rendered as dense offset bands — each glyph stroke becomes a K-lane ribbon with capped ends; band width per letter is seeded from [lanesMin, lanesMax]. colorBy cycles the palette per letter/word/line. joinStrokes turns the text into one flowing ribbon: connector bands swing between strokes and the letters carve over/under gaps into them (occlusionGap). fill 'hatch' instead outlines each fat stroke and fills it with parallel hatch lines (hatchAngleDeg/hatchSpacingMm; hatchLayers 1-3 cross-hatch; hatchOutline keeps the boundary; hatchInsetMm pulls the fill in) — stroke width still comes from lanes×laneSpacing, and strokes overlap at glyph junctions. Layout is centered per line; fit fills the page.",
   defaults: DEFAULTS,
   schema: {
     text: { value: DEFAULTS.text },
@@ -199,6 +210,13 @@ export const text: GeneratorDef<Params> = {
     occlusionGap: { value: DEFAULTS.occlusionGap, min: 0, max: 6, step: 0.1 },
     cornerSmooth: { value: DEFAULTS.cornerSmooth, min: 0, max: 4, step: 1 },
     endCaps: { value: DEFAULTS.endCaps },
+    fill: { value: DEFAULTS.fill, options: ["bands", "hatch"] },
+    hatchAngleDeg: { value: DEFAULTS.hatchAngleDeg, min: 0, max: 180, step: 1, render: (get) => get("Text Ribbons.fill") === "hatch" },
+    hatchSpacingMm: { value: DEFAULTS.hatchSpacingMm, min: 0.3, max: 5, step: 0.1, render: (get) => get("Text Ribbons.fill") === "hatch" },
+    hatchLayers: { value: DEFAULTS.hatchLayers, min: 1, max: 3, step: 1, render: (get) => get("Text Ribbons.fill") === "hatch" },
+    hatchAngleStepDeg: { value: DEFAULTS.hatchAngleStepDeg, min: 15, max: 90, step: 1, render: (get) => get("Text Ribbons.fill") === "hatch" && get("Text Ribbons.hatchLayers") >= 2 },
+    hatchOutline: { value: DEFAULTS.hatchOutline, render: (get) => get("Text Ribbons.fill") === "hatch" },
+    hatchInsetMm: { value: DEFAULTS.hatchInsetMm, min: 0, max: 3, step: 0.1, render: (get) => get("Text Ribbons.fill") === "hatch" },
     rotationDeg: { value: DEFAULTS.rotationDeg, min: -180, max: 180, step: 5 },
     colorBy: { value: DEFAULTS.colorBy, options: ["none", "letter", "word", "line"] },
     colorCount: { value: DEFAULTS.colorCount, min: 1, max: 6, step: 1 },
@@ -244,8 +262,42 @@ export const text: GeneratorDef<Params> = {
       });
     };
 
+    // Closed outline of a fat stroke at the full band width — a fillable contour.
+    // (Hershey glyphs are open skeletons; the fat-stroke outline is what we can hatch.)
+    const outlineOf = (center: Point[], k: number): Point[] => {
+      let c = center;
+      for (let i = 0; i < p.cornerSmooth; i++) c = chaikinPass(c);
+      const width = Math.max(p.laneSpacingMm, (k - 1) * p.laneSpacingMm);
+      const ring = offsetBand(c, 2, width, {
+        minInnerRadiusMm: p.laneSpacingMm,
+        miterLimit: 2,
+        endCaps: true, // force a closed outline regardless of the endCaps toggle
+        capSamples: 10,
+      })[0];
+      return ring ? ring.points : c;
+    };
+
     let bands: Polyline[];
-    if (!p.joinStrokes) {
+    if (p.fill === "hatch") {
+      // Fat-stroke outline + parallel hatch fill (boustrophedon-linked in hatchPolygon).
+      // joinStrokes/occlusion don't apply here — each glyph stroke fills independently.
+      const spacing = Math.max(0.1, p.hatchSpacingMm);
+      const layers = Math.max(1, Math.min(3, Math.round(p.hatchLayers)));
+      bands = strokes.flatMap((s) => {
+        if (s.points.length < 2) return [];
+        const stroke = colorOf(s);
+        const paint = (l: Polyline): Polyline => (stroke ? { ...l, stroke } : l);
+        const contour = outlineOf(s.points, lanesOfLetter.get(s.letterIdx)!);
+        const out: Polyline[] = [];
+        if (p.hatchOutline) out.push(paint({ points: contour, closed: false }));
+        for (let i = 0; i < layers; i++) {
+          for (const f of hatchPolygon(contour, p.hatchAngleDeg + i * p.hatchAngleStepDeg, spacing, { insetMm: p.hatchInsetMm })) {
+            out.push(paint(f));
+          }
+        }
+        return out;
+      });
+    } else if (!p.joinStrokes) {
       bands = strokes.flatMap((s) => {
         if (s.points.length < 2) return [];
         const stroke = colorOf(s);
