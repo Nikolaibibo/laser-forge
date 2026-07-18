@@ -27,6 +27,10 @@ type Params = {
   laneColorMode: "band" | "outlineFill"; // band = whole pipe one colour; outlineFill = outline pen + accent interior
   outlineColor: string;   // stroke of the outline lanes (outlineFill mode)
   outlineLanes: number;   // how many outermost lanes on each side form the outline
+  // How the interior lanes of an accented pipe are coloured (outlineFill only):
+  // solid = one accent per pipe; concentric = palette by lane depth (nested rings);
+  // alternating = palette cycling across the band. Non-accented pipes stay outline-only.
+  interiorFill: "solid" | "concentric" | "alternating";
   occlusion: boolean;     // pipes pass over/under each other (z-order gaps)
   occlusionGapMm: number; // clear gap carved beside the band that passes over
   arcSamples: number;
@@ -41,7 +45,7 @@ const DEFAULTS: Params = {
   colorCount: 3,
   color1: "#e0584f", color2: "#4f86e0", color3: "#5fcaa8",
   color4: "#e8a33d", color5: "#8d5fc9", color6: "#e96a3a",
-  laneColorMode: "band", outlineColor: "#1a1a1a", outlineLanes: 1,
+  laneColorMode: "band", outlineColor: "#1a1a1a", outlineLanes: 1, interiorFill: "solid",
   occlusion: true, occlusionGapMm: 1.0,
   arcSamples: 14, marginMm: 15,
 };
@@ -175,7 +179,7 @@ export const pipes: GeneratorDef<Params> = {
   id: "pipes",
   name: "Truchet Pipes",
   description:
-    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors); the accent palette itself is colorCount + color1…color6. crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Band width per pipe is seeded from [lanesMin, lanesMax]; endCaps closes band ends with nested semicircular caps. laneColorMode 'outlineFill' draws the outermost outlineLanes in outlineColor (the black pipe outline) and fills the interior lanes with the pipe's accent colour — a two-pen plot (outline pen first, then accents). Reseed reshuffles field + z-order.",
+    "Tile field of straights + 90° arcs; continuous pipes rendered as dense parallel bands. straightness controls run length; colorFraction colors a share of the pipes (colorStrategy 'largestFirst' = longest pipes get the accent colors); the accent palette itself is colorCount + color1…color6. crossing lets pipes pass through each other; occlusion resolves crossings as over/under with a clear gap (occlusionGapMm). model 'wang' (distinct pipes, default) vs 'classic' (Truchet grid); density (wang only) sets fill. Band width per pipe is seeded from [lanesMin, lanesMax]; endCaps closes band ends with nested semicircular caps. laneColorMode 'outlineFill' draws the outermost outlineLanes in outlineColor (the black pipe outline) and fills the interior lanes with the pipe's accent colour. interiorFill controls the interior: 'solid' (one accent), 'concentric' (palette by lane depth → nested colour rings), or 'alternating' (palette cycling across the band) — a multi-pen plot (outline pen first, then accents darkest→lightest). Reseed reshuffles field + z-order.",
   defaults: DEFAULTS,
   schema: {
     model: { value: DEFAULTS.model, options: ["wang", "classic"] },
@@ -201,6 +205,7 @@ export const pipes: GeneratorDef<Params> = {
     laneColorMode: { value: DEFAULTS.laneColorMode, options: ["band", "outlineFill"] },
     outlineColor: { value: DEFAULTS.outlineColor, render: (get) => get("Truchet Pipes.laneColorMode") === "outlineFill" },
     outlineLanes: { value: DEFAULTS.outlineLanes, min: 1, max: 4, step: 1, render: (get) => get("Truchet Pipes.laneColorMode") === "outlineFill" },
+    interiorFill: { value: DEFAULTS.interiorFill, options: ["solid", "concentric", "alternating"], render: (get) => get("Truchet Pipes.laneColorMode") === "outlineFill" },
     occlusion: { value: DEFAULTS.occlusion },
     occlusionGapMm: { value: DEFAULTS.occlusionGapMm, min: 0.2, max: 4, step: 0.1 },
     arcSamples: { value: DEFAULTS.arcSamples, min: 4, max: 32, step: 1 },
@@ -271,12 +276,19 @@ export const pipes: GeneratorDef<Params> = {
       }
       const n = c.lanes.length;
       const nOut = Math.max(1, Math.min(Math.floor(p.outlineLanes), Math.max(1, Math.floor(n / 2))));
-      const interior = c.stroke ?? p.outlineColor;
+      const pick = (idx: number): string => palette[((idx % palette.length) + palette.length) % palette.length];
       c.laneStrokes = c.lanes.map((_, i) => {
         // fused: index 0 = outer ring, grows inward → only a low-index test is an edge.
         // unfused: lanes run edge→edge, so both the first and last nOut are edges.
         const edge = c.fused ? i < nOut : (i < nOut || i >= n - nOut);
-        return edge ? p.outlineColor : interior;
+        if (edge) return p.outlineColor;
+        // Interior. solid (or a non-accented pipe) → one colour. concentric/alternating
+        // paint an accented pipe's interior from the palette.
+        if (p.interiorFill === "solid" || !c.stroke) return c.stroke ?? p.outlineColor;
+        // depth = rings in from the outline; concentric mirrors both sides, alternating
+        // cycles linearly across the band. Both start at 0 on the first interior lane.
+        const depth = c.fused ? i - nOut : Math.min(i, n - 1 - i) - nOut;
+        return pick(p.interiorFill === "concentric" ? depth : i - nOut);
       });
     }
 
