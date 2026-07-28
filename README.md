@@ -3,7 +3,10 @@
 Persönliche Werkbank für generative Vektor-Motive. Output geht direkt in
 Laser oder Plotter.
 
-**Live:** https://laser-forge-nb.web.app
+**Läuft lokal** auf der Plot-Station — Frontend auf dem Raspberry Pi, Bridge
+direkt an der Maschine. Die Firebase-Site `laser-forge-nb` existiert weiterhin,
+ist aber derzeit **nicht bespielt** (404); öffentliches Hosting ist optional,
+siehe [Deploy](#deploy).
 
 ## Das Modell
 
