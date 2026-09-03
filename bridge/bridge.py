@@ -243,10 +243,22 @@ def maybe_vpype(raw_svg: str) -> str:
             return raw_svg
         with open(fout) as f:
             cleaned = f.read()
-        # vpype writes <polyline>/<line>, not <path>; count all geometry elements.
+        # Count geometry elements. vpype writes <polyline> for open lines and
+        # <polygon> for closed ones (1.15.0) — never <path>, which is what the
+        # client sends. Missing <polygon> here made a perfectly good frame log as
+        # "geometry 1 -> 0" and sent a debugging session down the wrong hole.
+        # "<line" is matched with the closing delimiter so <linearGradient> and
+        # friends don't inflate the count.
         def geo(s: str) -> int:
-            return s.count("<path") + s.count("<polyline") + s.count("<line")
-        print(f"[vpype] geometry {geo(raw_svg)} -> {geo(cleaned)}", file=sys.stderr)
+            n = s.count("<path") + s.count("<polyline") + s.count("<polygon")
+            return n + len(re.findall(r"<line[\s/>]", s))
+        before, after = geo(raw_svg), geo(cleaned)
+        print(f"[vpype] geometry {before} -> {after}", file=sys.stderr)
+        if before > 0 and after == 0:
+            # vpype exited 0 but handed back nothing to draw. Passing that on
+            # gives axicli an empty file; fall back like every other failure.
+            print("[vpype] cleaned SVG has no geometry; using raw", file=sys.stderr)
+            return raw_svg
         return cleaned
     except Exception as e:  # noqa: BLE001 — any failure falls back to the raw SVG
         print(f"[vpype] error: {e}; using raw", file=sys.stderr)
@@ -499,6 +511,12 @@ class Handler(BaseHTTPRequestHandler):
                 return
             try:
                 ok, msg = fn()
+                if not ok:
+                    # The message goes to the client, but until 2026-09-03 it went
+                    # nowhere else — so a 500 left only "POST … 500" in the journal
+                    # and the actual axicli output was lost with the browser tab.
+                    print(f"[bridge] {path} FAILED: {(msg or '<no output>').strip()[:800]}",
+                          file=sys.stderr)
                 self._json(200 if ok else 500, {"ok": ok, "message": msg})
             finally:
                 LOCK.release()
