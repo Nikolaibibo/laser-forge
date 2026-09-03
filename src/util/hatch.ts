@@ -49,14 +49,49 @@ export function linkBoustrophedon(rows: ScanRow[]): Point[][] {
   for (const { y, spans } of rows) {
     const next: Chain[] = [];
     const used = new Set<number>();
-    for (const [x0, x1] of spans) {
-      const matches: number[] = [];
-      active.forEach((c, i) => {
-        if (!used.has(i) && overlaps(c.lo, c.hi, x0, x1)) matches.push(i);
-      });
-      if (matches.length === 1) {
-        const c = active[matches[0]];
-        used.add(matches[0]);
+
+    // Cost of continuing chain `ci` into span `si`: the connector we would draw,
+    // i.e. the gap from the pen's current x to the nearer end of the span.
+    const cost = (ci: number, si: number) => {
+      const last = active[ci].pts[active[ci].pts.length - 1];
+      const [x0, x1] = spans[si];
+      return Math.min(Math.abs(last[0] - x0), Math.abs(last[0] - x1));
+    };
+
+    // Assign chains to spans by SHORTEST connector, not by span order. When a row
+    // splits (at a hole or a notch) both new spans overlap the same chain; taking
+    // them in x-order hands the chain to the left span even when the pen sits at
+    // the right edge, which draws a connector clear across the shape. Resolving
+    // the ambiguity by distance is the whole point of the boustrophedon link.
+    // Iterative so the choice stays order-independent: only spans that overlap
+    // exactly ONE still-free chain may claim it (0 = new region, >1 = merge →
+    // fresh chain), and each assignment can make another span unambiguous.
+    const spanToChain = new Map<number, number>();
+    const freeChains = new Set(active.map((_, i) => i));
+    const freeSpans = new Set(spans.map((_, i) => i));
+    for (;;) {
+      let best: { si: number; ci: number; d: number } | null = null;
+      for (const si of freeSpans) {
+        const [x0, x1] = spans[si];
+        const cs: number[] = [];
+        for (const ci of freeChains) {
+          if (overlaps(active[ci].lo, active[ci].hi, x0, x1)) cs.push(ci);
+        }
+        if (cs.length !== 1) continue;
+        const d = cost(cs[0], si);
+        if (!best || d < best.d) best = { si, ci: cs[0], d };
+      }
+      if (!best) break;
+      spanToChain.set(best.si, best.ci);
+      freeSpans.delete(best.si);
+      freeChains.delete(best.ci);
+    }
+
+    spans.forEach(([x0, x1], si) => {
+      const ci = spanToChain.get(si);
+      if (ci !== undefined) {
+        const c = active[ci];
+        used.add(ci);
         const last = c.pts[c.pts.length - 1];
         // Enter at the end nearer the chain's last point, exit at the far end.
         if (Math.abs(last[0] - x0) <= Math.abs(last[0] - x1)) c.pts.push([x0, y], [x1, y]);
@@ -64,10 +99,10 @@ export function linkBoustrophedon(rows: ScanRow[]): Point[][] {
         c.lo = x0; c.hi = x1;
         next.push(c);
       } else {
-        // 0 matches (new region) or >1 (merge) → start a fresh chain.
+        // No chain claimed this span (new region, or a merge) → start a fresh one.
         next.push({ pts: [[x0, y], [x1, y]], lo: x0, hi: x1 });
       }
-    }
+    });
     // Finish chains not continued this row. The !next.includes(c) guard is load-
     // bearing: an extended chain is the SAME object in both `active` and `next`,
     // so without it continued chains would be double-flushed into `done`.
